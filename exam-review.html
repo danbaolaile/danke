@@ -209,6 +209,26 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
 .btn.primary{position:relative;overflow:hidden}
 .btn.primary::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.25),transparent);transform:translateX(-100%);transition:transform .6s}
 .btn.primary:hover::after{transform:translateX(100%)}
+/* ===== AUTH MODAL ===== */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.auth-modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:28px 24px;width:360px;max-width:90vw;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:modalIn .3s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.auth-modal h3{font-size:18px;font-weight:700;margin-bottom:4px;letter-spacing:-0.3px}
+.auth-modal .sub{font-size:10px;color:var(--text3);margin-bottom:20px}
+.auth-modal input{display:block;width:100%;padding:10px 12px;margin-bottom:10px;border:1px solid var(--border2);border-radius:10px;font-size:13px;font-family:var(--font);background:var(--surface2);color:var(--text);transition:all var(--t)}
+.auth-modal input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-l)}
+.auth-modal .auth-btn{width:100%;padding:10px;border:none;border-radius:10px;font-size:13px;font-family:var(--font);cursor:pointer;font-weight:600;margin-top:4px;transition:all var(--t)}
+.auth-modal .auth-btn.primary{background:linear-gradient(135deg,#B8860B,#D4A853);color:#111}
+.auth-modal .auth-btn.primary:hover{box-shadow:0 4px 20px rgba(212,168,83,.4)}
+.auth-modal .auth-btn.text{background:transparent;color:var(--text2);font-weight:400;margin-top:6px;font-size:11px}
+.auth-modal .auth-btn.text:hover{color:var(--accent)}
+.auth-modal .err{font-size:10px;color:var(--red);margin-top:6px;display:none}
+.sb-auth{padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:10px;cursor:pointer;color:var(--text3);transition:all var(--t);font-family:var(--font)}
+.sb-auth:hover{color:var(--accent);background:var(--surface2)}
+.sb-auth .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sb-auth .dot.off{background:var(--text3)}
+.sb-auth .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
 </style>
 </head>
 <body>
@@ -223,7 +243,7 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
     <button data-page="random">随机复习</button>
   </div>
   <div class="sb-subjects" id="sb-subjects"><div class="tt">错题集 · 按学科</div></div>
-  <div class="sb-footer">数据本地存储</div>
+  <div class="sb-auth" id="sb-auth-btn" onclick="showAuth()" title="点击登录同步数据"><span class="dot off" id="auth-dot"></span><span id="auth-label">数据本地存储 · 点击登录</span></div>
 </div>
 
 <div id="main">
@@ -327,9 +347,26 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
   </div>
 </div>
 
+<div class="auth-overlay" id="auth-overlay" style="display:none;" onclick="if(event.target===this)hideAuth()">
+  <div class="auth-modal">
+    <h3>🥚 蛋壳云同步</h3>
+    <div class="sub" id="auth-sub">登录后跨设备同步试卷和错题</div>
+    <input type="email" id="auth-email" placeholder="邮箱">
+    <input type="password" id="auth-password" placeholder="密码（≥6位）">
+    <div class="err" id="auth-err"></div>
+    <button class="auth-btn primary" id="auth-action" onclick="doAuth()">登录</button>
+    <button class="auth-btn text" id="auth-toggle" onclick="toggleAuthMode()">没有账号？注册</button>
+  </div>
+</div>
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// Supabase 初始化
+const SUPABASE_URL='https://uykcnvulbadwlixzezit.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5a2NudnVsYmFkd2xpeHpleml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzgyMDAsImV4cCI6MjA5NzQxNDIwMH0.6BVczfxI9xXgUYX0bOuPAXnVJCQGqLwApYE7GoYTH2I';
+const sb = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
 // ========== DB ==========
 const DB = {
   _db:null,
@@ -340,16 +377,39 @@ const DB = {
   async getAll(s){try{const db=await this.open();return new Promise(ok=>{const t=db.transaction(s,'readonly');const r=t.objectStore(s).getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([]);});}catch(e){return [];}},
 };
 
+// ========== AUTH & SYNC ==========
+const Auth={user:null,
+  async init(){const{data}=await sb.auth.getSession();if(data.session){this.user=data.session.user;await syncFromCloud();}sb.auth.onAuthStateChange(async(e,s)=>{if(e==='SIGNED_IN'&&s){this.user=s.user;await syncFromCloud();render();updateAuthUI();toast('✅已同步');}else if(e==='SIGNED_OUT'){this.user=null;render();updateAuthUI();}});updateAuthUI();},
+};
+async function syncFromCloud(){
+  if(!Auth.user)return;const u=Auth.user.id;
+  const{data:cp}=await sb.from('papers').select('*').eq('user_id',u);
+  if(cp)for(const p of cp){const o={id:p.id,name:p.name,subject:p.subject,date:p.date,count:p.count,firstQ:p.first_q};const ex=Store.papers.find(x=>x.id===p.id);if(ex){if((p.date||0)>(ex.date||0))Object.assign(ex,o);}else Store.papers.push(o);await DB.put('papers',p.id,o);}
+  const{data:cq}=await sb.from('paper_questions').select('*').eq('user_id',u);
+  if(cq)for(const r of cq){try{await DB.put('papers',r.paper_id+'_qs',r.questions);}catch(e){}}
+  const{data:cw}=await sb.from('wrongbook').select('*').eq('user_id',u);
+  if(cw)for(const w of cw){const it={...(w.data||w),id:w.id,subject:w.subject,addedAt:w.added_at,reviewCount:w.review_count,lastReviewed:w.last_reviewed,paperId:w.paper_id};const ex=Store.wrongBook.find(x=>x.id===w.id);if(ex){if((w.added_at||0)>(ex.addedAt||0))Object.assign(ex,it);}else Store.wrongBook.push(it);await DB.put('wrongbook',w.id,it);}
+}
+async function pushPapers(){if(!Auth.user)return;const u=Auth.user.id;for(const p of Store.papers){if(!p||!p.id)continue;await sb.from('papers').upsert({id:p.id,user_id:u,name:p.name,subject:p.subject,date:p.date,count:p.count,first_q:p.firstQ||''});try{const qs=await DB.get('papers',p.id+'_qs');if(qs&&qs.length)await sb.from('paper_questions').upsert({paper_id:p.id,user_id:u,questions:qs},{onConflict:'paper_id'});}catch(e){}}}
+async function pushWrongBook(){if(!Auth.user)return;const u=Auth.user.id;for(const w of Store.wrongBook){if(!w||!w.id)continue;await sb.from('wrongbook').upsert({id:w.id,user_id:u,paper_id:w.paperId||null,number:w.number,stem:w.stem,answer:w.answer||'',explanation:w.explanation||'',knowledge_points:w.knowledgePoints||[],subject:w.subject||guessSubject(w),type:w.type||'short_answer',review_count:w.reviewCount||0,last_reviewed:w.lastReviewed||null,added_at:w.addedAt||Date.now(),data:w});}}
+function showAuth(){document.getElementById('auth-overlay').style.display='flex';document.getElementById('auth-email').focus();_authMode='signin';updateAuthForm();}
+function hideAuth(){document.getElementById('auth-overlay').style.display='none';}
+let _authMode='signin';
+function toggleAuthMode(){_authMode=_authMode==='signin'?'signup':'signin';updateAuthForm();}
+function updateAuthForm(){document.getElementById('auth-action').textContent=_authMode==='signin'?'登录':'注册';document.getElementById('auth-sub').textContent=_authMode==='signin'?'登录后跨设备同步试卷和错题':'注册新账号，跨设备同步数据';document.getElementById('auth-toggle').textContent=_authMode==='signin'?'没有账号？注册':'已有账号？登录';document.getElementById('auth-err').style.display='none';}
+async function doAuth(){const e=document.getElementById('auth-email').value.trim(),p=document.getElementById('auth-password').value,er=document.getElementById('auth-err');if(!e||!p||p.length<6){er.textContent='请输入邮箱和至少6位密码';er.style.display='block';return;}er.style.display='none';let r;if(_authMode==='signin')r=await sb.auth.signInWithPassword({email:e,password:p});else r=await sb.auth.signUp({email:e,password:p});if(r.error){er.textContent=r.error.message;er.style.display='block';return;}Auth.user=r.data.user;updateAuthUI();if(_authMode==='signup'){toast('✅注册成功！');await pushPapers();await pushWrongBook();}hideAuth();render();}
+function updateAuthUI(){const d=document.getElementById('auth-dot'),l=document.getElementById('auth-label');if(Auth.user){d.className='dot on';l.textContent='已同步 · '+Auth.user.email;}else{d.className='dot off';l.textContent='数据本地存储 · 点击登录';}const b=document.getElementById('sb-auth-btn');if(Auth.user){b.onclick=async()=>{if(confirm('退出登录？本地数据不会丢失。')){await sb.auth.signOut();toast('已退出');}};b.title='点击退出登录';}else{b.onclick=showAuth;b.title='点击登录同步数据';}}
+
 // ========== STORE ==========
 const Store = {
   questions:[], wrongBook:[], papers:[], currentPage:'paste', activeSubject:'all', batchName:'',
   async load(){try{this.wrongBook=await DB.getAll('wrongbook');}catch(e){this.wrongBook=[];}try{this.papers=await DB.getAll('papers')||[];}catch(e){this.papers=[];}},
-  async addToWB(q){if(this.wrongBook.find(w=>w.id===q.id))return false;const s=q._userSubject||guessSubject(q);const item={...q,subject:s,addedAt:Date.now(),reviewCount:0};this.wrongBook.push(item);await DB.put('wrongbook',q.id,item);return true;},
-  async removeFromWB(id){this.wrongBook=this.wrongBook.filter(w=>w.id!==id);await DB.del('wrongbook',id);},
-  async clearWrongBook(){for(const w of this.wrongBook)await DB.del('wrongbook',w.id);this.wrongBook=[];},
+  async addToWB(q){if(this.wrongBook.find(w=>w.id===q.id))return false;const s=q._userSubject||guessSubject(q);const item={...q,subject:s,addedAt:Date.now(),reviewCount:0};this.wrongBook.push(item);await DB.put('wrongbook',q.id,item);if(Auth.user){const u=Auth.user.id;await sb.from('wrongbook').upsert({id:q.id,user_id:u,paper_id:q.paperId||null,number:q.number,stem:q.stem,answer:q.answer||'',explanation:q.explanation||'',knowledge_points:q.knowledgePoints||[],subject:s,type:q.type||'short_answer',review_count:0,added_at:item.addedAt,data:item});}return true;},
+  async removeFromWB(id){this.wrongBook=this.wrongBook.filter(w=>w.id!==id);await DB.del('wrongbook',id);if(Auth.user)await sb.from('wrongbook').delete().eq('id',id);},
+  async clearWrongBook(){for(const w of this.wrongBook){await DB.del('wrongbook',w.id);if(Auth.user)await sb.from('wrongbook').delete().eq('id',w.id);}this.wrongBook=[];},
   async savePaper(p){this.papers.push(p);await DB.put('papers',p.id,p);},
-  async exportData(){const j=JSON.stringify({wrongBook:this.wrongBook,papers:this.papers,d:Date.now()});const b=new Blob([j],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='错题本_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('✅已导出');},
-  async importData(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{try{const d=JSON.parse(await i.files[0].text());if(d.wrongBook){for(const w of d.wrongBook){if(!this.wrongBook.find(x=>x.id===w.id)){this.wrongBook.push(w);await DB.put('wrongbook',w.id,w);}}}if(d.papers){for(const p of d.papers){if(!this.papers.find(x=>x.id===p.id)){this.papers.push(p);await DB.put('papers',p.id,p);}}}render();toast('✅导入完成');}catch(e){toast('❌格式错误');}};i.click();},
+  async exportData(){const paperQs={};for(const p of this.papers){try{const qs=await DB.get('papers',p.id+'_qs');if(qs)paperQs[p.id]=qs;}catch(e){}}const j=JSON.stringify({wrongBook:this.wrongBook,papers:this.papers,paperQuestions:paperQs,d:Date.now()});const b=new Blob([j],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='蛋壳备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('✅已导出（含完整数据）');},
+  async importData(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{try{const d=JSON.parse(await i.files[0].text());let wc=0,pc=0;if(d.wrongBook){for(const w of d.wrongBook){if(!this.wrongBook.find(x=>x.id===w.id)){this.wrongBook.push(w);await DB.put('wrongbook',w.id,w);wc++;}}}if(d.papers){for(const p of d.papers){if(!this.papers.find(x=>x.id===p.id)){this.papers.push(p);await DB.put('papers',p.id,p);pc++;}}}if(d.paperQuestions){for(const[pid,qs]of Object.entries(d.paperQuestions)){await DB.put('papers',pid+'_qs',qs);}}render();toast('✅导入:'+wc+'题 '+pc+'份试卷');if(Auth.user){await pushPapers();await pushWrongBook();}}catch(e){toast('❌格式错误');}};i.click();},
 };
 
 // ========== 学科 ==========
@@ -450,6 +510,7 @@ const Parser = {
     Store.papers.push(paperObj);
     DB.put('papers',pid,paperObj);
     DB.put('papers',pid+'_qs',questions.map(q=>({...q,paperId:pid})));
+    if(Auth.user)pushPapers();
     if(userSubject)questions.forEach(q=>{q._userSubject=userSubject;q.paperId=pid;});
 
     // 清理 ** 标记
@@ -580,15 +641,16 @@ function removePaper(pid){
 async function deletePaper(pid){
   try{await DB.del('papers',pid);}catch(e){}
   try{await DB.del('papers',pid+'_qs');}catch(e){}
+  if(Auth.user){try{await sb.from('papers').delete().eq('id',pid);await sb.from('paper_questions').delete().eq('paper_id',pid);}catch(e){}}
   const related=Store.wrongBook.filter(w=>w.paperId===pid);
-  for(const w of related){try{await DB.del('wrongbook',w.id);}catch(e){}}
+  for(const w of related){try{await DB.del('wrongbook',w.id);}catch(e){}if(Auth.user){try{await sb.from('wrongbook').delete().eq('id',w.id);}catch(e){}}}
   Store.papers=(Store.papers||[]).filter(p=>p.id!==pid);
   Store.wrongBook=Store.wrongBook.filter(w=>w.paperId!==pid);
   render();toast('已删除');
 }
 
 async function toggleWB(qId,e){const q=Store.questions.find(q=>q.id===qId);if(!q)return;const cb=document.querySelector(`#q-${qId} .q-checkbox`);if(Store.wrongBook.find(w=>w.id===qId)){await Store.removeFromWB(qId);toast('已移出');}else{await Store.addToWB(q);toast('✅已加入错题本');if(cb){cb.classList.add('celebrate');setTimeout(()=>cb.classList.remove('celebrate'),500);}if(e){sparkAt(e.clientX,e.clientY);}}render();}
-async function reviewWB(id){const w=Store.wrongBook.find(w=>w.id===id);if(!w)return;w.reviewCount=(w.reviewCount||0)+1;w.lastReviewed=Date.now();await DB.put('wrongbook',id,w);toast('✅已记录');}
+async function reviewWB(id){const w=Store.wrongBook.find(w=>w.id===id);if(!w)return;w.reviewCount=(w.reviewCount||0)+1;w.lastReviewed=Date.now();await DB.put('wrongbook',id,w);if(Auth.user)await sb.from('wrongbook').update({review_count:w.reviewCount,last_reviewed:w.lastReviewed}).eq('id',id);toast('✅已记录');}
 
 // ========== 随机复习 ==========
 function renderRandom(){
@@ -663,7 +725,7 @@ document.addEventListener('mouseout',e=>{
 
 // ========== NAV & INIT ==========
 document.querySelectorAll('.sb-nav button').forEach(b=>b.addEventListener('click',()=>{Store.currentPage=b.dataset.page;render();}));
-(async()=>{await Store.load();render();})();
+(async()=>{await Store.load();await Auth.init();render();})();
 </script>
 </body>
 </html>
