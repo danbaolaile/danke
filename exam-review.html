@@ -436,6 +436,7 @@ function renderSubjects(){
 window.pickSubject=function(s){
   document.getElementById('subject-input').value=s;
   document.querySelectorAll('.subj-chip').forEach(c=>c.classList.toggle('active',c.textContent.trim()===s));
+  document.getElementById('paste-input').value='';
   copyPrompt();
 };
 
