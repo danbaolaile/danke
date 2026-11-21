@@ -1473,7 +1473,8 @@ const Quiz={
       if(!this.queue.length){localStorage.removeItem('danke-v3-session');return;}
       localStorage.setItem('danke-v3-session',JSON.stringify({
         queueIds:this.queue.map(e=>e.q.id),idx:this.idx,correct:this.correct,wrong:this.wrong,
-        label:this.customLabel||'',source:this.source,mode:this.mode,savedAt:Date.now()
+        label:this.customLabel||'',source:this.source,mode:this.mode,savedAt:Date.now(),
+        total:this.sessionTotal /* 开局题数；恢复与「继续上次」都以它为准，队尾重排不计入 */
       }));
     }catch(e){}
   },
@@ -1487,7 +1488,7 @@ const Quiz={
     if(!list.length){toast('上次的题目找不到了');return;}
     Exam.active=false;
     this.pool=list.slice();this.queue=list.map(q=>({q,inst:++this._inst}));
-    this.sessionTotal=this.queue.length;
+    this.sessionTotal=snap.total||new Set(snap.queueIds).size; /* 旧快照无 total 时用去重题数（重排只加重复项） */
     this.idx=Math.min(snap.idx||0,this.queue.length-1);
     this.correct=snap.correct||0;this.wrong=snap.wrong||0;
     this.answered={};this.selected=new Set();this.sessionCorrect={};this._requeued=new Set();this.done=false;
@@ -1883,7 +1884,7 @@ async function renderToday(){
   let snap=null;try{snap=JSON.parse(localStorage.getItem('danke-v3-session')||'null');}catch(e){}
   const rb=document.getElementById('today-resume');
   if(snap&&snap.queueIds&&snap.queueIds.length&&(snap.idx||0)<snap.queueIds.length){
-    rb.hidden=false;rb.textContent='继续上次（第 '+((snap.idx||0)+1)+' / '+snap.queueIds.length+' 题）';
+    rb.hidden=false;rb.textContent='继续上次（第 '+((snap.idx||0)+1)+' / '+(snap.total||new Set(snap.queueIds).size)+' 题）';
   }else rb.hidden=true;
   updateBadges();
 }
