@@ -229,6 +229,52 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
 .sb-auth .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .sb-auth .dot.off{background:var(--text3)}
 .sb-auth .dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+/* ===== v2: 阅读体验 / 刷题 / 智能导入 ===== */
+.q-list{max-width:840px}
+.q-item{padding:20px 22px;margin-bottom:14px}
+.q-stem{font-size:15px!important;line-height:1.9!important}
+.q-item .q-num{font-size:13px;margin-bottom:8px}
+.q-item .q-stem b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--gold-light);border:1px solid var(--gold);color:var(--gold)!important;font-size:12px;margin-right:6px;vertical-align:middle}
+.opt-btn{display:flex;align-items:flex-start;gap:12px;width:100%;min-height:48px;padding:13px 14px;border:1px solid var(--border2);border-radius:14px;background:var(--surface2);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.7;text-align:left;cursor:pointer;transition:all var(--t)}
+.opt-btn:hover{border-color:var(--gold);background:var(--surface)}
+.opt-btn .opt-letter{flex-shrink:0;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--gold);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--gold-light)}
+.opt-btn.correct{border-color:var(--green);background:var(--green-l)}
+.opt-btn.correct .opt-letter{background:var(--green);border-color:var(--green);color:#06210f}
+.opt-btn.wrong{border-color:var(--red);background:var(--red-l)}
+.opt-btn.wrong .opt-letter{background:var(--red);border-color:var(--red);color:#fff}
+.opt-btn.selected{border-color:var(--gold);background:var(--gold-light)}
+.opt-btn:disabled{cursor:default;opacity:1}
+.quiz-wrap{max-width:840px;margin:0 auto}
+.quiz-top{position:sticky;top:0;z-index:20;background:var(--bg);padding:10px 0 12px}
+.quiz-progress{height:8px;border-radius:6px;background:var(--surface2);overflow:hidden;margin:10px 0 6px}
+.quiz-progress i{display:block;height:100%;background:linear-gradient(90deg,#B8860B,#D4A853,#F0C860);border-radius:6px;transition:width .3s}
+.quiz-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 22px}
+.quiz-stem{font-size:16px;line-height:1.9;white-space:pre-wrap}
+.quiz-stem b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--gold-light);border:1px solid var(--gold);color:var(--gold);font-size:12px;margin-right:6px;vertical-align:middle}
+.quiz-opts{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.quiz-ans{margin-top:16px;padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.8;display:none}
+.quiz-ans.show{display:block}
+.quiz-ans.ok{background:var(--green-l);color:var(--green)}
+.quiz-ans.bad{background:var(--red-l);color:var(--red)}
+.quiz-exp{margin-top:12px;padding:14px 16px;border-radius:12px;background:var(--surface2);color:var(--text2);font-size:13px;line-height:1.8;display:none}
+.quiz-exp.show{display:block}
+.quiz-nav{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.quiz-nav .btn{min-height:44px;padding:10px 20px;font-size:13px}
+.quiz-stat{font-size:12px;color:var(--text2)}
+.quiz-stat b{color:var(--gold)}
+ .smart-card{text-align:left;background:var(--surface);border:1px solid var(--gold);border-radius:16px;padding:18px;max-width:660px;margin:0 auto 16px}
+.smart-card textarea{width:100%;min-height:180px;border:1px solid var(--border2);border-radius:12px;padding:14px;font-size:13px;font-family:var(--font);line-height:1.8;resize:vertical;background:var(--surface2);color:var(--text)}
+.smart-card textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-l)}
+details.ai-fallback{max-width:660px;margin:0 auto 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:11px;color:var(--text2)}
+details.ai-fallback summary{cursor:pointer;color:var(--gold);font-weight:600;font-size:12px}
+@media(max-width:768px){
+  .quiz-card{padding:18px 16px}
+  .quiz-stem{font-size:16px}
+  .opt-btn{font-size:15px;min-height:48px}
+  .q-stem{font-size:15px!important}
+  #sidebar .sb-nav button[data-page="quiz"]::before{content:'✎'}
+}
 </style>
 </head>
 <body>
@@ -238,6 +284,7 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
   <div class="sb-nav">
     <button class="active" data-page="paste">导入题目</button>
     <button data-page="questions">题目列表</button>
+    <button data-page="quiz">刷题</button>
     <button data-page="wrongbook">错题本 <span class="badge" id="wb-badge">0</span></button>
     <button data-page="papers">试卷库</button>
     <button data-page="random">随机复习</button>
@@ -261,11 +308,29 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
         <h2 style="font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;letter-spacing:-1px;">
           导入<span style="background:linear-gradient(135deg,#C89B3C,#E8C55A,#B8860B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">试卷</span>
         </h2>
-        <p style="color:var(--text3);font-size:12px;margin-top:4px;">三步完成 · DeepSeek 出题 → 平台收纳</p>
+        <p style="color:var(--text3);font-size:12px;margin-top:4px;">不用再去 DeepSeek 来回粘贴 · 在本页直接粘贴原文或上传文件就能拆题入库</p>
       </div>
-
+      <!-- 智能导入：本页直接解析 -->
+      <div class="smart-card">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:4px;">✦ 智能导入 · 粘贴原文直接拆题</div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.7;margin-bottom:10px;">支持从 PDF / 图片 OCR 复制来的纯文本、.txt / .md 文件。题号支持 1. / (1) / 一、 / 二(5) 等写法，选项 A–D 可分行或写在一行，答案 / 解析 / 知识点会自动识别；单选、多选自动判断。先在下方选学科，再粘贴。</div>
+        <textarea id="smart-input" placeholder="把试卷原文直接粘贴到这里……&#10;&#10;例如：&#10;1. 电力安装中漏电保护器的使用是防止下列哪类危险事故发生&#10;A. 过载 B. 触电 C. 电荷超速&#10;答案：B&#10;解析：漏电保护器用于防止触电。&#10;&#10;2. 下列哪一类不是密闭场地内常见的有毒气体&#10;A. 氯气 B. 一氧化碳 C. 硫化氢&#10;答案：A"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+          <label class="btn small" style="cursor:pointer;">📄 上传 .txt / .md 文件<input type="file" id="smart-file" accept=".txt,.md,text/plain" style="display:none;" onchange="SmartParser.loadFile(this)"></label>
+          <button class="btn" onclick="document.getElementById('smart-input').value=EXAMPLE_RAW">填入示例</button>
+          <span style="flex:1"></span>
+          <button class="btn primary" onclick="SmartParser.parseSmart()" style="font-size:13px;padding:9px 28px;min-height:44px;">智能解析并入库</button>
+        </div>
+        <div id="smart-result" style="font-size:12px;color:var(--text2);margin-top:10px;line-height:1.7;"></div>
+      </div>
+      <details class="ai-fallback">
+        <summary>AI 辅助整理（可选）· 原来的 DeepSeek 流程还在，需要时再展开</summary>
+        <div style="margin-top:10px;line-height:1.7;">如果原文是图片型 PDF、表格题等本地解析不准的情况，再用 DeepSeek 整理成「题号 / 答案 / 解析 / 知识点」格式后粘贴到下方旧文本框解析。平时不需要走这一步。</div>
+      </details>
+      <details class="ai-fallback">
+        <summary>AI 辅助整理 · DeepSeek 三步流程（可选，平时不需要）</summary>
       <!-- 三步引导 -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:660px;margin:0 auto 20px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:660px;margin:12px auto 20px;">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
           <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#C89B3C,#B8860B);color:#111;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-bottom:6px;">1</div>
           <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:4px;">选学科·复制指令</div>
@@ -283,6 +348,7 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
         </div>
       </div>
 
+      </details>
       <!-- 学科选择 -->
       <div style="max-width:660px;margin:0 auto 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
         <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">选择学科</div>
@@ -297,26 +363,65 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
           <span class="subj-chip" onclick="pickSubject('近代史')">近代史</span>
           <span class="subj-chip" onclick="pickSubject('计算机')">计算机</span>
           <span class="subj-chip" onclick="pickSubject('经济学')">经济学</span>
+          <span class="subj-chip" onclick="pickSubject('实验安全')">实验安全</span>
           <input type="text" id="subject-input" placeholder="其他..." style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;width:80px;background:var(--surface2);">
         </div>
       </div>
 
+      <details class="ai-fallback">
+        <summary>备用粘贴框（可选）· 把 DeepSeek 整理好的内容粘贴到这里解析</summary>
       <!-- 指令预览+粘贴 -->
       <div style="max-width:660px;margin:0 auto;">
         <div style="background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:11px;line-height:1.7;position:relative;overflow:hidden;" id="prompt-preview">
           <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--gold),transparent);"></div>
           <div style="padding-left:4px;">选学科 → 点「复制指令」→ 粘贴到 <a href="https://chat.deepseek.com" target="_blank" style="color:var(--gold);font-weight:600;">DeepSeek</a></div>
         </div>
-        <textarea id="paste-input" placeholder="把 DeepSeek 返回的内容粘贴到这里...&#10;&#10;格式：&#10;**1.** 题目&#10;**答案：** ...&#10;**解析：** ...&#10;**知识点：** ..." style="margin-bottom:10px;"></textarea>
+        <textarea id="paste-input" placeholder="备用：把 DeepSeek 整理好的内容粘贴到这里（平时用上方智能导入即可）...&#10;&#10;格式：&#10;**1.** 题目&#10;**答案：** ...&#10;**解析：** ...&#10;**知识点：** ..." style="margin-bottom:10px;"></textarea>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
           <button class="btn" onclick="copyPrompt()">复制指令</button>
           <button class="btn primary" onclick="Parser.parse()" style="font-size:13px;padding:8px 28px;">解析题目</button>
         </div>
       </div>
+      </details>
     </div>
 
     <!-- 题目列表 -->
     <div id="view-questions" style="display:none;"><div class="q-list" id="q-list"></div></div>
+
+
+    <!-- 刷题 -->
+    <div id="view-quiz" style="display:none;">
+      <div class="quiz-wrap">
+        <div class="quiz-top">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <select id="quiz-source" style="padding:8px 10px;font-size:12px;min-height:44px;" onchange="Quiz.setSource(this.value)">
+              <option value="all">全部题目</option>
+              <option value="safety" selected>实验安全（56题）</option>
+              <option value="wrongbook">错题本</option>
+              <option value="current">当前试卷</option>
+            </select>
+            <select id="quiz-category" style="padding:8px 10px;font-size:12px;min-height:44px;flex:1;min-width:140px;" onchange="Quiz.setCategory(this.value)">
+              <option value="all">全部分类</option>
+            </select>
+            <button class="btn small" id="quiz-mode-btn" onclick="Quiz.toggleMode()" style="min-height:44px;">顺序 ➜ 随机</button>
+          </div>
+          <div class="quiz-progress"><i id="quiz-bar" style="width:0%"></i></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="quiz-stat" id="quiz-progress-text">第 0 / 共 0 题</span>
+            <span class="quiz-stat" id="quiz-score-text">答对 <b>0</b> · 答错 <b>0</b> · 正确率 <b>—</b></span>
+          </div>
+        </div>
+        <div class="quiz-card" id="quiz-card"></div>
+        <div class="quiz-nav">
+          <button class="btn" onclick="Quiz.prev()" style="flex:1;">← 上一题</button>
+          <button class="btn" onclick="Quiz.addCurrentToWB()">＋ 加入错题本</button>
+          <button class="btn" onclick="Quiz.shuffle()">↻ 洗牌重来</button>
+          <button class="btn primary" onclick="Quiz.next()" style="flex:1;">下一题 →</button>
+        </div>
+        <div style="text-align:center;margin-top:14px;"><button class="btn small" onclick="if(confirm('确定把内置实验安全题库恢复到最初的 56 题吗？你的错题记录不会被清除。')){SafetySeed.reset();}">重置实验安全题库（56题）</button></div>
+        <div class="empty" id="quiz-empty" style="display:none;"><div class="icon">📭</div><p>这个范围里还没有题目</p><p style="font-size:11px;">先去「导入题目」粘贴原文，或选「实验安全」直接刷</p></div>
+      </div>
+    </div>
 
     <!-- 错题本 -->
     <div id="view-wrongbook" style="display:none;">
@@ -362,6 +467,8 @@ input[type="text"]:focus,select:focus{outline:none;border-color:var(--accent);bo
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SAFETY_PAPER_ID="p-safety-20261119";
+const SAFETY_QUESTIONS=[{"id": "safety-mult-1", "number": "多选1", "type": "multiple_choice", "stem": "对电焊钳要求正确的是", "options": [{"key": "A", "text": "电焊钳必须要有良好的绝缘性，隔热能力"}, {"key": "B", "text": "电焊钳与电焊电缆的连接处应保持接触良好，使用方便，无过热现象"}, {"key": "C", "text": "任何斜度下电焊钳都应该夹紧焊条，保证施焊安全方便"}, {"key": "D", "text": "禁止将过热的电焊钳浸在水中冷却后使用"}], "answer": "ABCD", "explanation": "", "category": "用电安全", "subject": "实验安全"}, {"id": "safety-mult-2", "number": "多选2", "type": "multiple_choice", "stem": "插座安装正确的是", "options": [{"key": "A", "text": "单相两孔插座，面对插座，右孔接相线，左孔接零线"}, {"key": "B", "text": "单相两孔插座上下安装时，面对插座，上接零线，下接相线"}, {"key": "C", "text": "单相三孔插座，面对插座，上接PE保护地线，右孔接相线，左孔接零线"}, {"key": "D", "text": "四孔插座只准用于380V电源上口接线"}], "answer": "ACD", "explanation": "", "category": "用电安全", "subject": "实验安全"}, {"id": "safety-mult-3", "number": "多选3", "type": "multiple_choice", "stem": "使用液化石油气时应注意", "options": [{"key": "A", "text": "不准在漏气时使用任何明火和电器"}, {"key": "B", "text": "不准将气瓶倒置"}, {"key": "C", "text": "不准将气瓶靠近火源热源"}, {"key": "D", "text": "不准使用不符合标准的气瓶"}], "answer": "ABCD", "explanation": "注：B 选项为录音辨认，待核实（录音不清）。", "category": "燃气与危险品储存运输", "subject": "实验安全"}, {"id": "safety-mult-4", "number": "多选4", "type": "multiple_choice", "stem": "对触电者如何进行抢救", "options": [{"key": "A", "text": "立即切断电源"}, {"key": "B", "text": "用干燥的布、不导电的材料将触电部位脱离带电体"}, {"key": "C", "text": "抬到通风干燥处，让触电者仰卧"}, {"key": "D", "text": "触电者呼吸及心跳均停止的时候应该做心肺复苏"}], "answer": "ABCD", "explanation": "", "category": "触电与创伤急救", "subject": "实验安全"}, {"id": "safety-mult-5", "number": "多选5", "type": "multiple_choice", "stem": "实验中遇到烫伤如何处理", "options": [{"key": "A", "text": "伤处不能用手摸，也不能用水洗"}, {"key": "B", "text": "不作处理直接就医"}, {"key": "C", "text": "伤处可以涂抹紫药水、红药水"}, {"key": "D", "text": "必要时可以用消炎粉"}], "answer": "CD", "explanation": "", "category": "触电与创伤急救", "subject": "实验安全"}, {"id": "safety-mult-6", "number": "多选6", "type": "multiple_choice", "stem": "毒害类化学品如何存放", "options": [{"key": "A", "text": "锁在专用柜子中"}, {"key": "B", "text": "存放于实验台下"}, {"key": "C", "text": "置于阴凉干燥处"}, {"key": "D", "text": "妥善保管"}], "answer": "ACD", "explanation": "", "category": "燃气与危险品储存运输", "subject": "实验安全"}, {"id": "safety-mult-7", "number": "多选7", "type": "multiple_choice", "stem": "中有爆炸、剧毒、放射性、可燃液体气体，下列哪一类运输不符合要求", "options": [{"key": "A", "text": "用自行车运输爆炸物"}, {"key": "B", "text": "用叉车运输易燃液体"}, {"key": "C", "text": "用起重机吊起爆炸品"}, {"key": "D", "text": "用装有阻火器的机动车运输易燃易爆品（正确做法）"}, {"key": "E", "text": "用危险化学品专用汽车运输（正确做法）"}], "answer": "ABC", "explanation": "", "category": "燃气与危险品储存运输", "subject": "实验安全"}, {"id": "safety-sing-1", "number": "单选1", "type": "single_choice", "stem": "电力安装中漏电保护器的使用是防止下列哪类危险事故发生", "options": [{"key": "A", "text": "过载"}, {"key": "B", "text": "触电"}, {"key": "C", "text": "电荷超速"}], "answer": "B 触电", "explanation": "", "category": "用电安全", "subject": "实验安全"}, {"id": "safety-sing-2", "number": "单选2", "type": "single_choice", "stem": "下列哪一类不是密闭场地内常见的有毒气体", "options": [{"key": "A", "text": "氯气"}, {"key": "B", "text": "一氧化碳"}, {"key": "C", "text": "硫化氢"}], "answer": "A 氯气", "explanation": "", "category": "密闭空间与有毒气体", "subject": "实验安全"}, {"id": "safety-sing-3", "number": "单选3", "type": "single_choice", "stem": "强烈氧化剂能与下列哪一类物质反应放出气体", "options": [{"key": "A", "text": "清水"}, {"key": "B", "text": "食盐"}, {"key": "C", "text": "有机含氯化合物"}], "answer": "C", "explanation": "", "category": "化学品与职业健康", "subject": "实验安全"}, {"id": "safety-sing-4", "number": "单选4", "type": "single_choice", "stem": "安全标志：等边三角形外形，黄色底色，周边黑色较宽边框，框内有一个感叹号，表示什么意思", "options": [{"key": "A", "text": "注意安全"}, {"key": "B", "text": "当心危险"}, {"key": "C", "text": "禁止进入"}], "answer": "A 注意安全", "explanation": "", "category": "安全标志", "subject": "实验安全"}, {"id": "safety-sing-5", "number": "单选5", "type": "single_choice", "stem": "安全标志：圆形，白色底，红色较宽的环形边框，框内有黑色图案，左上方至右下方有一条 45 度红色斜杠（禁止类标志）", "options": [], "answer": "（题干与答案缺失，录音只描述了图形）", "explanation": "", "category": "安全标志", "subject": "实验安全"}, {"id": "safety-sing-6", "number": "单选6", "type": "single_choice", "stem": "安全标志：等边三角形，黄色底黑色边框，中间骷髅图案", "options": [{"key": "A", "text": "死亡危险"}, {"key": "B", "text": "当心中毒"}, {"key": "C", "text": "核辐射危险"}], "answer": "B 当心中毒", "explanation": "", "category": "安全标志", "subject": "实验安全"}, {"id": "safety-sing-7", "number": "单选7", "type": "single_choice", "stem": "处理化学品后洗手可以预防下列哪种病", "options": [{"key": "A", "text": "（原文听不清）"}, {"key": "B", "text": "甲型肝炎"}, {"key": "C", "text": "皮肤炎"}], "answer": "C 皮肤炎", "explanation": "", "category": "化学品与职业健康", "subject": "实验安全"}, {"id": "safety-sing-8", "number": "单选8", "type": "single_choice", "stem": "下列哪类是危险化学品事故的间接原因", "options": [{"key": "A", "text": "危险化学品生产场所有害物浓度超出卫生标准"}, {"key": "B", "text": "没有对化学品的生产人员进行安全培训"}, {"key": "C", "text": "危险化学品生产人员不按规定穿戴个人防护服"}], "answer": "B 没有进行安全培训", "explanation": "", "category": "应急管理", "subject": "实验安全"}, {"id": "safety-sing-9", "number": "单选9", "type": "single_choice", "stem": "检验评价大部分应急预案响应功能，保持应急组织应急运行能力的演练活动是", "options": [{"key": "A", "text": "全面演练"}, {"key": "B", "text": "桌面演练"}, {"key": "C", "text": "功能演练"}], "answer": "A 全面演练", "explanation": "", "category": "应急管理", "subject": "实验安全"}, {"id": "safety-sing-10", "number": "单选10", "type": "single_choice", "stem": "下列不属于安全生产投入的是", "options": [{"key": "A", "text": "火警报警器更新"}, {"key": "B", "text": "加工机床维修"}, {"key": "C", "text": "防尘口罩的配备"}], "answer": "B 加工机床维修", "explanation": "", "category": "应急管理", "subject": "实验安全"}, {"id": "safety-sing-11", "number": "单选11", "type": "single_choice", "stem": "下面哪一项不属于紧急应变计划的项目", "options": [{"key": "A", "text": "（录音模糊）"}, {"key": "B", "text": "成立紧急队伍"}, {"key": "C", "text": "传递安全（选项C不属于）"}], "answer": "C", "explanation": "", "category": "应急管理", "subject": "实验安全"}, {"id": "safety-sing-12", "number": "单选12", "type": "single_choice", "stem": "物料安全数据表四个字母缩写", "options": [], "answer": "MSDS", "explanation": "", "category": "化学品与职业健康", "subject": "实验安全"}, {"id": "safety-sing-13", "number": "单选13", "type": "single_choice", "stem": "烧烫伤后处理", "options": [{"key": "A", "text": "用冰敷伤处"}, {"key": "B", "text": "挑破水泡并涂上化学药品"}, {"key": "C", "text": "先用水冲洗伤口，然后再用敷料覆盖"}], "answer": "C", "explanation": "", "category": "触电与创伤急救", "subject": "实验安全"}, {"id": "safety-sing-14", "number": "单选14", "type": "single_choice", "stem": "在存放易燃液体的区域保持良好的空气流通，为什么", "options": [{"key": "A", "text": "防止易燃气体聚集而发生爆炸或火情"}, {"key": "B", "text": "冷却易燃液体，降低其蒸发速度"}], "answer": "A", "explanation": "", "category": "燃气与危险品储存运输", "subject": "实验安全"}, {"id": "safety-sing-15", "number": "单选15", "type": "single_choice", "stem": "在含有一氧化碳的环境下工作要佩戴哪种呼吸器", "options": [{"key": "A", "text": "装有高效能除尘器"}, {"key": "B", "text": "活性炭"}, {"key": "C", "text": "空气供气式呼吸器"}], "answer": "C", "explanation": "", "category": "密闭空间与有毒气体", "subject": "实验安全"}, {"id": "safety-sing-16", "number": "单选16", "type": "single_choice", "stem": "公共场所发生突发事故或者踩踏时应采取什么姿势保护自己", "options": [{"key": "A", "text": "趴在地上，双手抱头"}, {"key": "B", "text": "仰面朝天"}, {"key": "C", "text": "身体蜷缩成球状双手抱头"}], "answer": "C", "explanation": "", "category": "劳动防护与作业安全", "subject": "实验安全"}, {"id": "safety-sing-17", "number": "单选17", "type": "single_choice", "stem": "因为破坏臭氧层被取代的灭火器", "options": [{"key": "A", "text": "二氧化碳灭火器"}, {"key": "B", "text": "1211、1301灭火器"}, {"key": "C", "text": "干粉灭火器"}], "answer": "B", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-18", "number": "单选18", "type": "single_choice", "stem": "事故发生，接到报警后立即启动应急预案，采取有效措施，防止事故扩大，减少伤亡财产损失", "options": [{"key": "A", "text": "撤离设备"}, {"key": "B", "text": "撤离现场"}, {"key": "C", "text": "组织抢救"}], "answer": "C 组织抢救", "explanation": "", "category": "应急管理", "subject": "实验安全"}, {"id": "safety-sing-19", "number": "单选19", "type": "single_choice", "stem": "眼睛接触氨水后立即用流水或什么水洗", "options": [{"key": "A", "text": "生理盐水"}, {"key": "B", "text": "矿泉水"}, {"key": "C", "text": "碱性水"}], "answer": "A 生理盐水", "explanation": "", "category": "触电与创伤急救", "subject": "实验安全"}, {"id": "safety-sing-20", "number": "单选20", "type": "single_choice", "stem": "乙醇着火不应该用哪一类灭火器", "options": [{"key": "A", "text": "二氧化碳"}, {"key": "B", "text": "泡沫灭火器"}], "answer": "B 泡沫灭火器", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-21", "number": "单选21", "type": "single_choice", "stem": "可燃固体火灾应该用哪一个灭火器", "options": [{"key": "A", "text": "磷酸铵盐干粉灭火器（ABC干粉）"}, {"key": "B", "text": "碳酸氢钠干粉灭火器（BC干粉）"}], "answer": "A 磷酸铵盐干粉", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-22", "number": "单选22", "type": "single_choice", "stem": "干粉灭火器的主要灭火作用", "options": [{"key": "A", "text": "化学抑制作用"}, {"key": "B", "text": "隔离作用"}, {"key": "C", "text": "冷却作用"}], "answer": "A 化学抑制", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-23", "number": "单选23", "type": "single_choice", "stem": "二氧化碳灭火器的灭火作用", "options": [{"key": "A", "text": "冷却、窒息"}, {"key": "B", "text": "隔离"}], "answer": "窒息", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-24", "number": "单选24", "type": "single_choice", "stem": "可燃气体场所应该配备哪类灭火器", "options": [{"key": "A", "text": "泡沫灭火器"}, {"key": "B", "text": "二氧化碳灭火器"}, {"key": "C", "text": "碳酸氢钠干粉灭火器"}], "answer": "A（录音讲课答案）", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-25", "number": "单选25", "type": "single_choice", "stem": "下列哪一类灭火器不应该用作扑灭易燃液体引起的火灾", "options": [{"key": "A", "text": "水基灭火器"}, {"key": "B", "text": "泡沫灭火器"}, {"key": "C", "text": "干粉灭火器"}], "answer": "A 水基灭火器", "explanation": "注：选项按录音补全（txt 漏了泡沫，干粉错标为 B）。", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-26", "number": "单选26", "type": "single_choice", "stem": "工厂内日常之火势及浓烟迅速蔓延，工厂的门要怎么样", "options": [{"key": "A", "text": "装上自动关闭设备"}, {"key": "B", "text": "保持打开"}], "answer": "A 装上自动关闭设备", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-27", "number": "单选27", "type": "single_choice", "stem": "下列哪一类灭火器的配备是正确的", "options": [{"key": "A", "text": "在档案室里配备BC干粉灭火器"}, {"key": "B", "text": "在变配电房里配备泡沫灭火器"}, {"key": "C", "text": "在电子计算机房里配备二氧化碳灭火器"}], "answer": "C", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-28", "number": "单选28", "type": "single_choice", "stem": "清除金属小火要用哪种方法灭火", "options": [{"key": "A", "text": "干沙覆盖"}, {"key": "B", "text": "泡沫灭火"}, {"key": "C", "text": "二氧化碳灭火"}], "answer": "A 干沙覆盖", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-29", "number": "单选29", "type": "single_choice", "stem": "既可扑灭固体，又可扑灭液体、气体火灾是什么灭火器", "options": [{"key": "A", "text": "二氧化碳灭火器"}, {"key": "B", "text": "ABC灭火器"}, {"key": "C", "text": "BC灭火器"}], "answer": "B ABC灭火器", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-30", "number": "单选30", "type": "single_choice", "stem": "下列哪类不属于违反消防安全", "options": [{"key": "A", "text": "大型商场的防火卷帘下面堆放商品"}, {"key": "B", "text": "宾馆通往封闭式消防楼梯防火门常开"}, {"key": "C", "text": "灭火器放在原处（不挪动）"}], "answer": "C", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-31", "number": "单选31", "type": "single_choice", "stem": "灭火时降低燃点，使其停止燃烧的方法", "options": [{"key": "A", "text": "隔离灭火"}, {"key": "B", "text": "窒息灭火"}, {"key": "C", "text": "冷却灭火"}], "answer": "C 冷却灭火", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-32", "number": "单选32", "type": "single_choice", "stem": "水能够灭火的主要原因是什么", "options": [{"key": "A", "text": "水受热蒸发产生水蒸气稀释空气"}, {"key": "B", "text": "水大量吸收燃烧产生的热量，使着火物温度降到燃点以下"}, {"key": "C", "text": "水附着在着火表面"}], "answer": "B", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-33", "number": "单选33", "type": "single_choice", "stem": "下列哪类灭火操作是正确的", "options": [{"key": "A", "text": "灭油类火灾时先用化学泡沫灭火器，再用BC干粉"}, {"key": "B", "text": "灭油类火灾时先用BC灭火器，再用ABC灭火器"}, {"key": "C", "text": "扑灭可燃性气体火灾时先用二氧化碳，再使用BC干粉"}], "answer": "C", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-34", "number": "单选34", "type": "single_choice", "stem": "搬运重物时，我们应该考虑下列哪一项", "options": [{"key": "A", "text": "减少弯腰提取"}, {"key": "B", "text": "尽量采用机器机械协助"}, {"key": "C", "text": "彰显个人能力"}], "answer": "B", "explanation": "", "category": "劳动防护与作业安全", "subject": "实验安全"}, {"id": "safety-sing-35", "number": "单选35", "type": "single_choice", "stem": "理想的电离辐射屏蔽材料", "options": [{"key": "A", "text": "铝"}, {"key": "B", "text": "铅"}, {"key": "C", "text": "塑料"}], "answer": "B 铅", "explanation": "", "category": "劳动防护与作业安全", "subject": "实验安全"}, {"id": "safety-sing-36", "number": "单选36", "type": "single_choice", "stem": "安全带正确使用", "options": [{"key": "A", "text": "低挂高用"}, {"key": "B", "text": "高挂低用"}], "answer": "B（高挂低用）", "explanation": "", "category": "劳动防护与作业安全", "subject": "实验安全"}, {"id": "safety-sing-37", "number": "单选37", "type": "single_choice", "stem": "工友打磨石料处理，佩戴什么防护", "options": [{"key": "A", "text": "护眼罩和防尘口罩"}, {"key": "B", "text": "护眼罩"}, {"key": "C", "text": "防尘口罩"}], "answer": "A", "explanation": "", "category": "劳动防护与作业安全", "subject": "实验安全"}, {"id": "safety-sing-38", "number": "单选38", "type": "single_choice", "stem": "进入密闭有限空间救援优先选用什么防护装备", "options": [{"key": "A", "text": "净化空气式防毒面具"}, {"key": "B", "text": "（录音模糊）"}, {"key": "C", "text": "供气式呼吸器"}], "answer": "C 供气式呼吸器", "explanation": "", "category": "密闭空间与有毒气体", "subject": "实验安全"}, {"id": "safety-sing-39", "number": "单选39", "type": "single_choice", "stem": "如果困于火场，正确做法", "options": [], "answer": "B 将门关上，用毛毡将门底的空隙塞住，立即报警，走向窗前呼救", "explanation": "注：录音里这道题的正确选项是 B。", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-supplement-cpr", "number": "补充题", "type": "single_choice", "stem": "心肺复苏（CPR）按压与人工呼吸的比例是多少？（补充题：录音里老师只提示“它会问你们按下多少次”“你们自己下去看”，未读选项和答案）", "options": [{"key": "A", "text": "15:2"}, {"key": "B", "text": "30:2"}, {"key": "C", "text": "5:1"}], "answer": "B 30:2（按压频率100–120次/分钟，按压深度5–6厘米）", "explanation": "补充题，非录音原文。标准急救：按压与人工呼吸比例30:2，频率100–120次/分钟，深度5–6厘米。", "category": "触电与创伤急救", "subject": "实验安全"}, {"id": "safety-sing-40", "number": "单选40", "type": "single_choice", "stem": "触电时应该采取什么措施", "options": [{"key": "A", "text": "立即检查触电者有没有心跳，如没有就立即进行心肺复苏"}, {"key": "B", "text": "立即切断电源，使触电者与带电部分脱离"}, {"key": "C", "text": "立即拨打120"}], "answer": "B", "explanation": "", "category": "用电安全", "subject": "实验安全"}, {"id": "safety-sing-41", "number": "单选41", "type": "single_choice", "stem": "人体触电时，哪个器官最容易受损", "options": [{"key": "A", "text": "心脏"}, {"key": "B", "text": "肝脏"}, {"key": "C", "text": "肾脏"}], "answer": "A 心脏", "explanation": "", "category": "用电安全", "subject": "实验安全"}, {"id": "safety-sing-42", "number": "单选42", "type": "single_choice", "stem": "火警发生时，可使工人迅速逃往安全的地方，工厂门", "options": [{"key": "A", "text": "向内开"}, {"key": "B", "text": "向外开"}], "answer": "B 向外开", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-43", "number": "单选43", "type": "single_choice", "stem": "下列哪一类是正确的防火措施", "options": [{"key": "A", "text": "储存易燃品的地方需禁烟"}, {"key": "B", "text": "喷油房内严禁携带易燃液体"}], "answer": "A", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-44", "number": "单选44", "type": "single_choice", "stem": "火场烟雾逃生怎么办", "options": [], "answer": "设法蹲低或贴近地面爬行", "explanation": "", "category": "消防灭火", "subject": "实验安全"}, {"id": "safety-sing-45", "number": "单选45", "type": "single_choice", "stem": "若被毒性、腐蚀性液体溅到皮肤处理", "options": [], "answer": "用大量清水冲洗", "explanation": "", "category": "触电与创伤急救", "subject": "实验安全"}, {"id": "safety-sing-46", "number": "单选46", "type": "single_choice", "stem": "可以盛放腐蚀性液体容器", "options": [{"key": "A", "text": "石器"}, {"key": "B", "text": "金属容器"}, {"key": "C", "text": "塑料容器"}], "answer": "C 塑料容器", "explanation": "注：题干按录音改为“腐蚀性液体”（txt 写的是“磁性液体”）。", "category": "化学品与职业健康", "subject": "实验安全"}, {"id": "safety-sing-47", "number": "单选47", "type": "single_choice", "stem": "稀释浓酸，正确操作", "options": [], "answer": "B 把酸往水里倒（酸入水）", "explanation": "注：录音里这道题的正确选项是 B。", "category": "化学品与职业健康", "subject": "实验安全"}, {"id": "safety-sing-48", "number": "单选48", "type": "single_choice", "stem": "四氯化碳会损伤哪个器官", "options": [{"key": "A", "text": "肺"}, {"key": "B", "text": "皮肤"}, {"key": "C", "text": "肝"}], "answer": "A 肺", "explanation": "", "category": "化学品与职业健康", "subject": "实验安全"}];
 // Supabase 初始化
 const SUPABASE_URL='https://uykcnvulbadwlixzezit.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5a2NudnVsYmFkd2xpeHpleml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MzgyMDAsImV4cCI6MjA5NzQxNDIwMH0.6BVczfxI9xXgUYX0bOuPAXnVJCQGqLwApYE7GoYTH2I';
@@ -403,7 +510,7 @@ function updateAuthUI(){const d=document.getElementById('auth-dot'),l=document.g
 // ========== STORE ==========
 const Store = {
   questions:[], wrongBook:[], papers:[], currentPage:'paste', activeSubject:'all', batchName:'',
-  async load(){try{this.wrongBook=await DB.getAll('wrongbook');}catch(e){this.wrongBook=[];}try{this.papers=await DB.getAll('papers')||[];}catch(e){this.papers=[];}},
+  async load(){try{this.wrongBook=await DB.getAll('wrongbook');}catch(e){this.wrongBook=[];}try{this.papers=await DB.getAll('papers')||[];}catch(e){this.papers=[];}await SafetySeed.ensure();},
   async addToWB(q){if(this.wrongBook.find(w=>w.id===q.id))return false;const s=q._userSubject||guessSubject(q);const item={...q,subject:s,addedAt:Date.now(),reviewCount:0};this.wrongBook.push(item);await DB.put('wrongbook',q.id,item);if(Auth.user){const u=Auth.user.id;await sb.from('wrongbook').upsert({id:q.id,user_id:u,paper_id:q.paperId||null,number:q.number,stem:q.stem,answer:q.answer||'',explanation:q.explanation||'',knowledge_points:q.knowledgePoints||[],subject:s,type:q.type||'short_answer',review_count:0,added_at:item.addedAt,data:item});}return true;},
   async removeFromWB(id){this.wrongBook=this.wrongBook.filter(w=>w.id!==id);await DB.del('wrongbook',id);if(Auth.user)await sb.from('wrongbook').delete().eq('id',id);},
   async clearWrongBook(){for(const w of this.wrongBook){await DB.del('wrongbook',w.id);if(Auth.user)await sb.from('wrongbook').delete().eq('id',w.id);}this.wrongBook=[];},
@@ -427,7 +534,7 @@ function renderSubjects(){
   const el=document.getElementById('sb-subjects');
   const wc={};Store.wrongBook.forEach(w=>{const s=w.subject||guessSubject(w);wc[s]=(wc[s]||0)+1;});
   const pc={};Store.papers.forEach(p=>{const s=p.subject||'其他';pc[s]=(pc[s]||0)+1;});
-  const all=[...new Set([...Object.keys(wc),...Object.keys(pc)])].sort();
+  const all=[...new Set([...Object.keys(wc),...Object.keys(pc),'实验安全'])].sort();
   el.innerHTML='<div class="tt">📚 错题集·按学科</div>'+
     `<div class="sj${Store.activeSubject==='all'?' active':''}" onclick="filterBySubject(\'all\')">全部 <b>${Store.wrongBook.length}</b></div>`+
     all.map(s=>`<div class="sj${Store.activeSubject===s?' active':''}" onclick="filterBySubject('${s}')">${s} ${wc[s]?`<b>${wc[s]}题</b>`:'<span style="color:var(--text3);">0</span>'}</div>`).join('');
@@ -573,15 +680,17 @@ function sparkAt(x,y){for(let i=0;i<8;i++){const s=document.createElement('div')
 
 function render(){
   document.querySelectorAll('.sb-nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===Store.currentPage));
-  const titles={paste:'导入题目',questions:Store.batchName,wrongbook:'错题本',papers:'试卷库',random:'随机复习'};
+  const titles={paste:'导入题目',questions:Store.batchName,quiz:'刷题',wrongbook:'错题本',papers:'试卷库',random:'随机复习'};
   document.getElementById('page-title').textContent=titles[Store.currentPage]||'';
-  document.getElementById('page-count').textContent=Store.currentPage==='questions'?Store.questions.length+'题':Store.currentPage==='wrongbook'?Store.wrongBook.length+'题':Store.currentPage==='papers'?Store.papers.length+'份':'';
+  document.getElementById('page-count').textContent=Store.currentPage==='questions'?Store.questions.length+'题':Store.currentPage==='wrongbook'?Store.wrongBook.length+'题':Store.currentPage==='papers'?Store.papers.length+'份':Store.currentPage==='quiz'?(Quiz.pool.length?Quiz.pool.length+'题':''):'';
   document.getElementById('view-paste').style.display=Store.currentPage==='paste'?'':'none';
   document.getElementById('view-questions').style.display=Store.currentPage==='questions'?'':'none';
+  document.getElementById('view-quiz').style.display=Store.currentPage==='quiz'?'':'none';
   document.getElementById('view-wrongbook').style.display=Store.currentPage==='wrongbook'?'':'none';
   document.getElementById('view-papers').style.display=Store.currentPage==='papers'?'':'none';
   document.getElementById('view-random').style.display=Store.currentPage==='random'?'':'none';
   if(Store.currentPage==='questions')renderQuestions();
+  if(Store.currentPage==='quiz')Quiz.render();
   if(Store.currentPage==='wrongbook')renderWrongBook();
   if(Store.currentPage==='papers')renderPapers();
   if(Store.currentPage==='random')renderRandom();
@@ -636,6 +745,7 @@ async function viewPaper(pid){
 }
 
 function removePaper(pid){
+  if(pid===SAFETY_PAPER_ID){toast('内置实验安全题库不能删除，可用刷题页的「重置」恢复');return;}
   if(!confirm('删除这份试卷？关联错题也会移除。'))return;
   deletePaper(pid);
 }
@@ -723,6 +833,266 @@ document.addEventListener('mouseout',e=>{
   if(e.target.closest('.q-item,.wb-item'))return;
   document.querySelectorAll('.q-item,.wb-item').forEach(c=>c.style.transform='');
 });
+
+
+// ========== v2: 内置实验安全题库 ==========
+const SafetySeed = {
+  paper(){return {id:SAFETY_PAPER_ID,name:'实验室安全考试复习题（录音核对版）',subject:'实验安全',date:new Date('2026-11-19').getTime(),count:SAFETY_QUESTIONS.length,firstQ:(SAFETY_QUESTIONS[0].stem||'').slice(0,80),builtin:true};},
+  norm(q){let ansLetters=(q.answer||'').match(/[A-E]/g)||[];
+    // 答案只有文字、没有字母时（如单选23答案“窒息”），按选项文本反推字母
+    if(!ansLetters.length&&q.options&&q.options.length){const a=(q.answer||'').trim();const hit=q.options.find(o=>a&&(o.text.includes(a)||a.includes(o.text)));if(hit)ansLetters=[hit.key];}
+    return {...q,paperId:SAFETY_PAPER_ID,_userSubject:'实验安全',knowledgePoints:[q.category],subjects:['实验安全'],type:q.options&&q.options.length?(q.type||'single_choice'):'short_answer',_answerLetters:ansLetters};},
+  async ensure(){
+    try{
+      if(!Store.papers.find(p=>p.id===SAFETY_PAPER_ID)){
+        const p=this.paper();Store.papers.push(p);await DB.put('papers',p.id,p);
+      }
+      const qs=await DB.get('papers',SAFETY_PAPER_ID+'_qs');
+      if(!qs||!Array.isArray(qs)||qs.length!==SAFETY_QUESTIONS.length){
+        await DB.put('papers',SAFETY_PAPER_ID+'_qs',SAFETY_QUESTIONS.map(q=>this.norm(q)));
+      }
+    }catch(e){console.error('safety seed failed',e);}
+  },
+  async reset(){
+    try{await DB.put('papers',SAFETY_PAPER_ID+'_qs',SAFETY_QUESTIONS.map(q=>this.norm(q)));}catch(e){}
+    const p=Store.papers.find(p=>p.id===SAFETY_PAPER_ID);
+    if(p){p.count=SAFETY_QUESTIONS.length;try{await DB.put('papers',p.id,p);}catch(e){}}
+    Quiz.pool=[];Quiz.idx=0;render();toast('✅ 实验安全题库已重置为 56 题');
+  },
+  questions(){return SAFETY_QUESTIONS.map(q=>this.norm(q));}
+};
+
+// ========== v2: 智能导入（本页本地解析，无需 DeepSeek） ==========
+const EXAMPLE_RAW = `1. 电力安装中漏电保护器的使用是防止下列哪类危险事故发生
+A. 过载 B. 触电 C. 电荷超速
+答案：B
+解析：漏电保护器用于防止触电。
+
+2. 下列哪一类不是密闭场地内常见的有毒气体
+A. 氯气
+B. 一氧化碳
+C. 硫化氢
+答案：A`;
+const SmartParser = {
+  loadFile(input){
+    const f=input.files&&input.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{document.getElementById('smart-input').value=r.result;toast('✅ 已读入 '+f.name);};
+    r.readAsText(f);
+  },
+  // 拆出选项：行首 A. / A、/ A) 或同一行里多个 "A. xxx B. xxx"
+  extractOptions(text){
+    const opts=[];
+    // 先按行首选项切
+    const lines=text.split('\n');
+    let stemLines=[];
+    for(const line of lines){
+      // 先判同行多选项（"A. xx B. yy C. zz" 写在一行的情况优先处理，
+      // 否则行首匹配会把整行吞成一个选项）
+      const parts=line.split(/(?=\s[A-E]\s*[.、．)）:：])/);
+      if(parts.length>1 && parts.slice(1).every(p=>/^\s*[A-E]\s*[.、．)）:：]/.test(p))){
+        const first=parts[0].trim();
+        const fm=first.match(/^([A-E])\s*[.、．)）:：]\s*(.+)$/);
+        if(fm)opts.push({key:fm[1],text:fm[2].trim()});
+        else if(first)stemLines.push(first);
+        for(const p of parts.slice(1)){const mm=p.match(/^\s*([A-E])\s*[.、．)）:：]\s*(.+)$/);if(mm)opts.push({key:mm[1],text:mm[2].trim()});}
+        continue;
+      }
+      const m=line.match(/^\s*([A-E])\s*[.、．)）:：]\s*(.+)$/);
+      if(m){opts.push({key:m[1],text:m[2].trim()});continue;}
+      stemLines.push(line);
+    }
+    return {stem:stemLines.join('\n').trim(),options:opts};
+  },
+  parseSmart(){
+    const raw=(document.getElementById('smart-input').value||'').trim();
+    const res=document.getElementById('smart-result');
+    if(!raw){toast('请先粘贴试卷原文或上传文件');return;}
+    const qs=this.parseRaw(raw);
+    if(!qs.length){res.innerHTML='未识别到题目。检查一下题号是不是 1. / (1) / 一、 这种写法。';toast('未识别到题目');return;}
+    this.saveQuestions(qs);
+    res.innerHTML=`✅ 已解析 <b style="color:var(--gold);">${qs.length} 题</b>（单选 ${qs.filter(q=>q.type==='single_choice').length} · 多选 ${qs.filter(q=>q.type==='multiple_choice').length} · 简答 ${qs.filter(q=>q.type==='short_answer').length}），已入库，可到「题目列表 / 刷题」查看。`;
+    toast(`✅ ${qs.length}题已入库`);
+  },
+  parseRaw(raw){
+    const lines=raw.split('\n');
+    const RE=[
+      /^\s*(?:第)?([一二三四五六七八九十]+)\s*[（(]\s*(\d+)\s*[）)]\s*[.、．]?\s*/,
+      /^\s*[（(]\s*(\d+)\s*[）)]\s*[.、．]?\s*/,
+      /^\s*(?:第)?(\d+)\s*[.、．)）]\s*/,
+      /^\s*([一二三四五六七八九十]+)\s*[、．.]\s*/,
+      /^\s*(\d+)\s*[、，]\s*/,
+    ];
+    const CN={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10};
+    const blocks=[];let cur=null;
+    for(const line of lines){
+      let matched=false;
+      for(const re of RE){
+        const m=line.match(re);if(!m)continue;
+        if(cur)blocks.push(cur);
+        let num;if(m[2])num=(CN[m[1]]||m[1])+'-'+m[2];else if(CN[m[1]])num=String(CN[m[1]]);else num=m[1];
+        cur={num,lines:[line.slice(m[0].length)]};matched=true;break;
+      }
+      if(!matched){if(cur)cur.lines.push(line);else if(line.trim()){cur={num:'1',lines:[line]};}}
+    }
+    if(cur)blocks.push(cur);
+    const out=[];
+    blocks.forEach((b,idx)=>{
+      const joined=b.lines.join('\n');
+      // 答案 / 解析 / 知识点：按标记切分
+      const getSec=(name)=>{
+        const re=new RegExp('\\n?\\*{0,2}\\s*'+name+'\\s*\\*{0,2}\\s*[:：]\\s*','');
+        const m=joined.match(re);if(!m)return{val:'',idx:-1};
+        return{val:'',idx:m.index,len:m[0].length};
+      };
+      const a=getSec('答案'),e=getSec('解析'),k=getSec('知识点');
+      const cuts=[a,e,k].filter(x=>x.idx>=0).sort((x,y)=>x.idx-y.idx);
+      let body=joined,answer='',expl='',kp=[];
+      const valAt=(sec,nextIdx)=>{const s=sec.idx+sec.len;const en=(nextIdx!=null?nextIdx:joined.length);return joined.slice(s,en).trim();};
+      if(cuts.length){
+        body=joined.slice(0,cuts[0].idx).trim();
+        cuts.forEach((sec,ci)=>{
+          const next=ci+1<cuts.length?cuts[ci+1].idx:null;
+          const v=valAt(sec,next);
+          if(sec===a)answer=v;else if(sec===e)expl=v;else kp=v.split(/[,;，；、\n]/).map(s=>s.replace(/[*\-·•\s]/g,'').trim()).filter(s=>s);
+        });
+      }
+      // 答案里可能在行内： "答案：B" 已处理；兜底：末尾 "答案 B"
+      if(!answer){const m2=joined.match(/答案\s*[:：]?\s*([A-E][A-E,\s、]*)($|\n)/);if(m2)answer=m2[1].trim();}
+      const {stem,options}=this.extractOptions(body);
+      const letters=(answer.match(/[A-E]/g)||[]);
+      const isMulti=/多选|多选题/.test(stem+answer)||letters.length>1;
+      const type=options.length===0?'short_answer':(isMulti?'multiple_choice':'single_choice');
+      const cleanStem=stem.replace(/\*{1,2}/g,'').trim();
+      if(!cleanStem&&!answer)return;
+      out.push({id:'q'+Date.now()+'_s'+idx,number:b.num,stem:cleanStem,answer:answer.replace(/\*{1,2}/g,'').trim(),explanation:expl.replace(/\*{1,2}/g,'').trim(),knowledgePoints:kp,type,options,_answerLetters:letters,raw:joined});
+    });
+    return out;
+  },
+  async saveQuestions(questions){
+    const userSubject=(document.getElementById('subject-input').value||'').trim();
+    const title=(document.getElementById('smart-input').value.match(/^##\s*(.+)/m)||[])[1]||(userSubject?userSubject+'·试卷':'智能导入试卷');
+    Store.batchName=title;
+    const pid='p'+Date.now();
+    const paperObj={id:pid,name:Store.batchName,subject:userSubject||guessSubject({stem:questions[0]?.stem||''}),date:Date.now(),count:questions.length,firstQ:(questions[0]?.stem||'').slice(0,80)};
+    Store.papers.push(paperObj);
+    await DB.put('papers',pid,paperObj);
+    const withMeta=questions.map(q=>({...q,paperId:pid,_userSubject:userSubject||undefined}));
+    await DB.put('papers',pid+'_qs',withMeta);
+    if(Auth.user)pushPapers();
+    Store.questions=withMeta;Store.currentPage='questions';render();
+  }
+};
+
+// ========== v2: 刷题 ==========
+const Quiz = {
+  pool:[],idx:0,mode:'seq',source:'safety',category:'all',
+  correct:0,wrong:0,answered:{},selected:new Set(),revealed:false,
+  async allQuestions(){
+    const list=[...SafetySeed.questions()];
+    for(const p of (Store.papers||[])){
+      if(p.id===SAFETY_PAPER_ID)continue;
+      try{const qs=await DB.get('papers',p.id+'_qs');if(Array.isArray(qs))list.push(...qs.map(q=>({...q,subject:q._userSubject||q.subject||p.subject||guessSubject(q)})));}catch(e){}
+    }
+    return list;
+  },
+  async buildPool(){
+    let list=[];
+    if(this.source==='safety')list=SafetySeed.questions();
+    else if(this.source==='wrongbook')list=[...Store.wrongBook];
+    else if(this.source==='current')list=[...Store.questions];
+    else list=await this.allQuestions();
+    if(this.category!=='all')list=list.filter(q=>((q.category||(q.knowledgePoints&&q.knowledgePoints[0])||q.subject||guessSubject(q))===this.category));
+    if(this.mode==='rand'){for(let i=list.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}}
+    this.pool=list;this.idx=0;this.answered={};this.correct=0;this.wrong=0;this.selected=new Set();this.revealed=false;
+    this.fillCategories();
+  },
+  fillCategories(){
+    const sel=document.getElementById('quiz-category');if(!sel)return;
+    const cats=[...new Set(SafetySeed.questions().map(q=>q.category))];
+    const cur=sel.value||'all';
+    sel.innerHTML='<option value="all">全部分类</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    if([...sel.options].some(o=>o.value===this.category))sel.value=this.category;else sel.value='all';
+  },
+  setSource(v){this.source=v;this.buildPool().then(()=>this.render());},
+  setCategory(v){this.category=v;this.buildPool().then(()=>this.render());},
+  toggleMode(){this.mode=this.mode==='seq'?'rand':'seq';document.getElementById('quiz-mode-btn').textContent=this.mode==='seq'?'顺序 ➜ 随机':'随机 ➜ 顺序';this.buildPool().then(()=>this.render());},
+  shuffle(){this.buildPool().then(()=>{this.render();toast('已洗牌');});},
+  cur(){return this.pool[this.idx];},
+  async render(){
+    if(!this.pool.length&&!this._built){this._built=true;await this.buildPool();}
+    const card=document.getElementById('quiz-card'),empty=document.getElementById('quiz-empty');
+    const total=this.pool.length;
+    document.getElementById('quiz-bar').style.width=total?Math.round(((this.idx+1)/total)*100)+'%':'0%';
+    document.getElementById('quiz-progress-text').textContent=total?`第 ${this.idx+1} / 共 ${total} 题`:'第 0 / 共 0 题';
+    const done=this.correct+this.wrong;
+    document.getElementById('quiz-score-text').innerHTML=`答对 <b>${this.correct}</b> · 答错 <b>${this.wrong}</b> · 正确率 <b>${done?Math.round(this.correct/done*100)+'%':'—'}</b>`;
+    if(!total){card.innerHTML='';empty.style.display='';return;}
+    empty.style.display='none';
+    const q=this.cur();const st=this.answered[q.id];
+    const letters=(q._answerLetters&&q._answerLetters.length?q._answerLetters:(q.answer||'').match(/[A-E]/g)||[]);
+    const isMulti=q.type==='multiple_choice';
+    const cat=q.category||(q.knowledgePoints&&q.knowledgePoints[0])||q.subject||guessSubject(q);
+    let optsHtml='';
+    if(q.options&&q.options.length){
+      optsHtml='<div class="quiz-opts">'+q.options.map(o=>{
+        let cls='';
+        if(st){if(letters.includes(o.key))cls=' correct';else if(st.selected.includes(o.key))cls=' wrong';}
+        else if(this.selected.has(o.key))cls=' selected';
+        return `<button class="opt-btn${cls}" ${st?'disabled':''} onclick="Quiz.choose('${o.key}')"><span class="opt-letter">${o.key}</span><span>${esc(o.text)}</span></button>`;
+      }).join('')+'</div>';
+      if(isMulti&&!st)optsHtml+=`<div style="margin-top:12px;"><button class="btn primary" style="width:100%;min-height:48px;" onclick="Quiz.submitMulti()">提交多选答案</button></div>`;
+    }else{
+      optsHtml=`<div class="quiz-opts"><button class="opt-btn" onclick="Quiz.revealShort(this)"><span class="opt-letter">?</span><span>这道题没有选项，点击查看答案</span></button></div>`;
+    }
+    const ansHtml=st?`<div class="quiz-ans show ${st.ok?'ok':'bad'}">${st.ok?'✅ 答对了':'❌ 答错了'}　正确答案：${esc(q.answer||'见解析')}</div>`:`<div class="quiz-ans" id="quiz-ans"></div>`;
+    card.innerHTML=`
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+        <span style="font-size:12px;font-weight:700;color:var(--gold);">第${q.number}题</span>
+        <span style="font-size:11px;background:var(--orange-l);color:var(--orange);padding:3px 9px;border-radius:8px;">${esc(q.subject||'实验安全')}</span>
+        <span style="font-size:11px;background:var(--surface2);color:var(--text2);padding:3px 9px;border-radius:8px;">${esc(cat)}</span>
+        <span style="font-size:11px;color:var(--text3);">${isMulti?'多选':(q.options&&q.options.length?'单选':'简答')}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text3);">复习 ${q.reviewCount||0} 次</span>
+      </div>
+      <div class="quiz-stem">${fm(q.stem)}</div>
+      ${optsHtml}
+      ${ansHtml}
+      <div class="quiz-exp ${st&&q.explanation?'show':''}" id="quiz-exp">${q.explanation?`<b style="color:var(--text);">📖 解析</b><br>${fm(q.explanation)}`:''}${q.knowledgePoints&&q.knowledgePoints.length?`<div style="margin-top:8px;">🧠 知识点：${q.knowledgePoints.map(k=>esc(k)).join(' · ')}</div>`:''}</div>`;
+    if(st&&q.explanation)document.getElementById('quiz-exp').classList.add('show');
+  },
+  choose(key){
+    const q=this.cur();if(!q||this.answered[q.id])return;
+    if(q.type==='multiple_choice'){this.selected.has(key)?this.selected.delete(key):this.selected.add(key);this.render();return;}
+    this.judge([key]);
+  },
+  submitMulti(){
+    if(!this.selected.size){toast('请先选至少一个选项');return;}
+    this.judge([...this.selected]);
+  },
+  async judge(selected){
+    const q=this.cur();if(!q)return;
+    const letters=(q._answerLetters&&q._answerLetters.length?q._answerLetters:(q.answer||'').match(/[A-E]/g)||[]);
+    const ok=letters.length>0&&selected.length===letters.length&&selected.every(k=>letters.includes(k));
+    this.answered[q.id]={selected,ok};
+    if(ok)this.correct++;else{this.wrong++;await Store.addToWB(q);}
+    this.selected=new Set();
+    this.render();
+  },
+  revealShort(btn){
+    const q=this.cur();if(!q)return;
+    this.answered[q.id]={selected:[],ok:null};
+    const a=document.getElementById('quiz-ans');if(a){a.className='quiz-ans show ok';a.textContent='✅ 答案：'+(q.answer||'暂无答案');}
+    const e=document.getElementById('quiz-exp');if(e)e.classList.add('show');
+    if(btn)btn.disabled=true;
+  },
+  async addCurrentToWB(){
+    const q=this.cur();if(!q){toast('没有题目');return;}
+    const ok=await Store.addToWB(q);
+    toast(ok?'✅ 已加入错题本':'已在错题本里');render();
+  },
+  next(){if(!this.pool.length)return;this.idx=Math.min(this.idx+1,this.pool.length-1);this.selected=new Set();this.render();},
+  prev(){if(!this.pool.length)return;this.idx=Math.max(this.idx-1,0);this.selected=new Set();this.render();},
+};
 
 // ========== NAV & INIT ==========
 document.querySelectorAll('.sb-nav button').forEach(b=>b.addEventListener('click',()=>{Store.currentPage=b.dataset.page;render();}));
