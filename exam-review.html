@@ -367,6 +367,17 @@ details.legacy p{font-size:12px;color:var(--text3);line-height:1.8;margin:8px 0}
   *,*::before,*::after{animation:none!important;transition:none!important}
   .home-glow{animation:none}
 }
+
+/* ---- v4：试卷 / 学科 ---- */
+.paper-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px}
+.paper-head{display:block;width:100%;text-align:left;background:none;border:0;padding:0;cursor:pointer;color:var(--text)}
+.paper-name{font-size:15px;font-weight:700;line-height:1.5}
+.paper-meta{font-size:12px;color:var(--text3);margin-top:4px}
+.paper-first{display:block;font-size:13px;color:var(--text2);margin-top:6px;line-height:1.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paper-chev{float:right;color:var(--text3);font-size:13px}
+.paper-qs{margin-top:12px}
+.paper-actions{margin-top:10px;display:flex;gap:8px}
+.paper-actions .btn{flex:0 0 auto}
 </style>
 </head>
 <body>
@@ -465,6 +476,7 @@ details.legacy p{font-size:12px;color:var(--text3);line-height:1.8;margin:8px 0}
     <div class="search-wrap">
       <input id="search-input" type="search" placeholder="搜题干 / 知识点 / 分类…" autocomplete="off">
     </div>
+    <div class="chip-row" id="lib-subject-chips"></div>
     <div class="chip-row" id="lib-chips"></div>
     <div id="lib-active-filter" style="margin-bottom:10px"></div>
     <div class="btn-row" style="margin-bottom:12px">
@@ -472,6 +484,7 @@ details.legacy p{font-size:12px;color:var(--text3);line-height:1.8;margin:8px 0}
       <button class="btn ghost" id="lib-add">快速加一题</button>
     </div>
     <div id="lib-count" class="muted" style="margin-bottom:10px"></div>
+    <div id="lib-papers"></div>
     <div id="lib-list"></div>
   </section>
 
@@ -623,16 +636,20 @@ details.legacy p{font-size:12px;color:var(--text3);line-height:1.8;margin:8px 0}
   <div class="sheet-handle"></div>
   <button class="close-x" data-close="import-sheet" aria-label="关闭">✕</button>
   <div class="sheet-title">导入题目</div>
-  <p class="sheet-sub">直接粘贴试卷原文，或上传 .txt / .md 文件。支持 1. / (1) / 一、 / 第X题 等题号写法。</p>
+  <p class="sheet-sub">直接粘贴试卷原文，或上传整卷文件（.txt / .md / .pdf / .docx），会识别成一张试卷。支持 1. / (1) / 一、 / 第X题 等题号写法。</p>
   <div class="form-row"><label>学科（可选，用于归类）</label>
     <input id="subject-input" placeholder="例如：实验安全" autocomplete="off">
   </div>
+  <div class="form-row"><label>试卷名（可改；上传文件时默认取文件名）</label>
+    <input id="paper-name-input" placeholder="例如：2024 年数学期末" autocomplete="off">
+  </div>
+  <p class="muted" style="line-height:1.8">限制：PDF 须含文字层，扫描版（图片型）读不出；仅支持 .docx，老 .doc 不支持；大文件解析会慢，请稍等。</p>
   <div class="form-row"><label>试卷原文</label>
     <textarea id="import-input" placeholder="1. 题干……&#10;A. 选项一&#10;B. 选项二&#10;答案：B&#10;解析：……&#10;知识点：用电安全"></textarea>
   </div>
   <div class="btn-row">
     <button class="btn" id="import-file-btn">上传文件</button>
-    <input type="file" id="import-file" accept=".txt,.md" hidden>
+    <input type="file" id="import-file" accept=".txt,.md,.pdf,.docx" hidden>
     <button class="btn primary" id="import-run">解析并入库</button>
   </div>
   <div id="import-result" style="margin-top:12px;font-size:14px;line-height:1.9;color:var(--text2)"></div>
@@ -665,6 +682,10 @@ details.legacy p{font-size:12px;color:var(--text3);line-height:1.8;margin:8px 0}
   <div class="form-row"><label>答案（字母，如 A；多选写 AB）</label><input id="qa-answer" placeholder="A"></div>
   <div class="form-row"><label>解析（可选）</label><input id="qa-exp" placeholder=""></div>
   <div class="form-row"><label>知识点 / 分类（逗号分隔，第一个作分类）</label><input id="qa-kp" placeholder="例如：消防灭火"></div>
+  <div class="form-row"><label>试卷</label>
+    <select id="qa-paper"></select>
+  </div>
+  <div class="form-row" id="qa-paper-name-row" hidden><label>新试卷名</label><input id="qa-paper-name" placeholder="例如：2024 年数学期末"></div>
   <div class="form-row"><label>学科</label>
     <select id="qa-subject">
       <option>实验安全</option><option>数学</option><option>物理</option><option>化学</option>
@@ -798,6 +819,25 @@ async function allQuestionsFlat(){
   const seen=new Set(),out=[];
   for(const q of list){if(!q||!q.id||seen.has(q.id))continue;seen.add(q.id);out.push(q);}
   return sortQuestions(out);
+}
+
+/* ================= 试卷 / 学科（一级组织，v4） ================= */
+function paperList(){return (Store.papers||[]).filter(p=>p&&p.id);}
+function paperById(pid){return paperList().find(p=>p.id===pid)||null;}
+function subjectOf(q){return q._userSubject||q.subject||guessSubject(q);}
+function subjectList(){
+  const s=new Set();
+  for(const p of paperList())if(p.subject)s.add(p.subject);
+  for(const q of (Store.questions||[])){const sub=q._userSubject||q.subject;if(sub)s.add(sub);}
+  return [...s].sort();
+}
+async function questionsOfPaper(pid){
+  if(pid===SAFETY_PAPER_ID)return SafetySeed.questions();
+  try{const qs=await DB.get('papers',pid+'_qs');return Array.isArray(qs)?qs:[];}catch(e){return [];}
+}
+async function questionsOfSubject(subj){
+  const all=await allQuestionsFlat();
+  return all.filter(q=>subjectOf(q)===subj);
 }
 
 /* ================= 同步日志（写进「我的」，失败不静默） ================= */
@@ -970,6 +1010,7 @@ const Store={
       await Progress.save();
     }
     this.questions=await allQuestionsFlat();
+    fillSources();
     refreshCurrentView();
     toast('已导入：'+wc+' 错题 · '+pc+' 份试卷'+(d.progress?' · 含复习进度':'（旧备份，无进度）'));
     if(sb&&Auth.user){await pushPapers();await pushWrongBook();}
@@ -996,6 +1037,7 @@ async function deletePaper(pid){
   Store.papers=(Store.papers||[]).filter(p=>p.id!==pid);
   Store.wrongBook=Store.wrongBook.filter(w=>w.paperId!==pid);
   Store.questions=await allQuestionsFlat();
+  fillSources();
   refreshCurrentView();toast('已删除');
 }
 
@@ -1150,12 +1192,85 @@ A. 氯气
 B. 一氧化碳
 C. 硫化氢
 答案：A`;
+/* ================= 文件抽取（v4：整卷 PDF / Word；CDN 失败时明确提示、不报错） ================= */
+const PDFJS_CDN='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.js';
+const MAMMOTH_CDN='https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js';
+const _scriptCache={};
+function loadScriptOnce(src,timeoutMs){
+  if(_scriptCache[src])return _scriptCache[src];
+  const p=new Promise((ok,fail)=>{
+    const s=document.createElement('script');s.src=src;s.async=true;
+    const to=setTimeout(()=>{s.remove();fail(new Error('加载超时'));},timeoutMs||12000);
+    s.onload=()=>{clearTimeout(to);ok();};
+    s.onerror=()=>{clearTimeout(to);s.remove();fail(new Error('加载失败'));};
+    document.head.appendChild(s);
+  });
+  _scriptCache[src]=p;
+  p.catch(()=>{delete _scriptCache[src];});
+  return p;
+}
 const SmartParser={
-  loadFile(input){
+  async ensurePdfJs(){
+    if(window.pdfjsLib)return window.pdfjsLib;
+    try{await loadScriptOnce(PDFJS_CDN);}catch(e){return null;}
+    return window.pdfjsLib||null;
+  },
+  async ensureMammoth(){
+    if(window.mammoth)return window.mammoth;
+    try{await loadScriptOnce(MAMMOTH_CDN);}catch(e){return null;}
+    return window.mammoth||null;
+  },
+  /* lib 供测试注入桩：传对象直接用；传 false 表示“组件不可用”，立即报 guard 错误，不碰网络 */
+  async extractPdfText(file,lib,onProgress){
+    const pdfjs=lib===undefined?await this.ensurePdfJs():(lib||null);
+    if(!pdfjs)throw new Error('PDF 解析组件未加载（网络或 CDN 问题），请用粘贴文本导入');
+    const buf=await file.arrayBuffer();
+    const doc=await pdfjs.getDocument({data:buf,disableWorker:true}).promise;
+    const out=[];
+    for(let i=1;i<=doc.numPages;i++){
+      const page=await doc.getPage(i);
+      const tc=await page.getTextContent();
+      out.push(tc.items.map(it=>it.str).join(' '));
+      if(onProgress)onProgress(i,doc.numPages);
+    }
+    return out.join('\n');
+  },
+  async extractDocxText(file,lib){
+    const m=lib===undefined?await this.ensureMammoth():(lib||null);
+    if(!m)throw new Error('Word 解析组件未加载（网络或 CDN 问题），请用粘贴文本导入');
+    const buf=await file.arrayBuffer();
+    const r=await m.extractRawText({arrayBuffer:buf});
+    return r.value||'';
+  },
+  async loadFile(input){
     const f=input.files&&input.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=()=>{document.getElementById('import-input').value=r.result;toast('已读入 '+f.name);};
-    r.readAsText(f);
+    const res=document.getElementById('import-result');
+    const name=f.name||'';
+    const ext=(name.split('.').pop()||'').toLowerCase();
+    const setPaperName=()=>{const base=name.replace(/\.[^.]+$/,'');const pi=document.getElementById('paper-name-input');if(pi&&!pi.value)pi.value=base;};
+    try{
+      if(ext==='txt'||ext==='md'){
+        const text=await f.text();
+        document.getElementById('import-input').value=text;setPaperName();toast('已读入 '+f.name);
+      }else if(ext==='pdf'){
+        res.textContent='正在加载 PDF 解析组件…';
+        const text=await this.extractPdfText(f,undefined,(i,n)=>{res.textContent='正在读取 PDF 第 '+i+' / '+n+' 页…';});
+        if(!text.trim()){res.textContent='这份 PDF 读不到文字：可能是扫描版（图片型），请用手机拍成文字版粘贴，或找带文字层的版本。';return;}
+        document.getElementById('import-input').value=text;setPaperName();
+        await this.previewImport(text,{name:(document.getElementById('paper-name-input')||{}).value||''});
+      }else if(ext==='docx'){
+        res.textContent='正在加载 Word 解析组件…';
+        const text=await this.extractDocxText(f);
+        if(!text.trim()){res.textContent='这份 Word 读不到文字，请检查文件内容。';return;}
+        document.getElementById('import-input').value=text;setPaperName();
+        await this.previewImport(text,{name:(document.getElementById('paper-name-input')||{}).value||''});
+      }else{
+        res.textContent='不支持的文件类型：仅支持 .txt / .md / .pdf / .docx；老 .doc（非 .docx）读不出来，请另存为 .docx 后再传。';
+        toast('不支持的文件类型');
+      }
+    }catch(e){
+      res.textContent='读不出来：'+(e&&e.message?e.message:e)+'。可以把文字粘贴到上方文本框再解析。';
+    }finally{input.value='';}
   },
   extractOptions(text){
     const opts=[];
@@ -1247,10 +1362,34 @@ const SmartParser={
     res.innerHTML=html;
     toast(qs.length+' 题已入库');
   },
-  async saveQuestions(questions){
-    const userSubject=(document.getElementById('subject-input').value||'').trim();
+  /* 文件上传用：先出解析报告，用户确认后再入库（粘贴路径 parseSmart 保持立即入库） */
+  async previewImport(text,opts){
+    opts=opts||{};
+    const res=document.getElementById('import-result');
+    const{questions:qs,skipped}=this.parseRawWithReport(text);
+    if(!qs.length){res.innerHTML='未识别到题目。检查一下题号是不是 1. / (1) / 一、 这种写法。';toast('未识别到题目');return{questions:qs,skipped};}
+    this._pending={questions:qs,name:opts.name||'',subject:opts.subject||''};
+    let html='认出 <b>'+qs.length+' 题</b>（单选 '+qs.filter(q=>q.type==='single_choice').length+' · 多选 '+qs.filter(q=>q.type==='multiple_choice').length+' · 简答 '+qs.filter(q=>q.type==='short_answer').length+'）';
+    if(skipped.length)html+='<br>以下 '+skipped.length+' 行开头没认出来，会跳过：'+skipped.slice(0,5).map(s=>'第 '+s.line+' 行「'+esc(s.text)+'」').join('、');
+    html+='<br><button class="btn primary" data-act="confirm-import" style="margin-top:8px">确认入库 '+qs.length+' 题</button> <button class="btn ghost" data-act="cancel-import" style="margin-top:8px">取消</button>';
+    res.innerHTML=html;
+    return{questions:qs,skipped};
+  },
+  async confirmImport(){
+    const p=this._pending;
+    if(!p||!p.questions||!p.questions.length){toast('没有待入库的题目');return null;}
+    this._pending=null;
+    const liveName=((document.getElementById('paper-name-input')||{}).value||'').trim();
+    const pid=await this.saveQuestions(p.questions,{name:liveName||p.name,subject:p.subject});
+    toast(p.questions.length+' 题已入库');
+    return pid;
+  },
+  async saveQuestions(questions,opts){
+    opts=opts||{};
+    const userSubject=(opts.subject!==undefined?opts.subject:(document.getElementById('subject-input').value||'').trim());
     const raw=(document.getElementById('import-input').value||'');
-    const title=(raw.match(/^##\s*(.+)/m)||[])[1]||(userSubject?userSubject+'·试卷':'智能导入试卷');
+    const nameInput=((document.getElementById('paper-name-input')||{}).value||'').trim();
+    const title=opts.name||nameInput||(raw.match(/^##\s*(.+)/m)||[])[1]||(userSubject?userSubject+'·试卷':'智能导入试卷');
     Store.batchName=title;
     const pid='p'+Date.now();
     const paperObj={id:pid,name:Store.batchName,subject:userSubject||guessSubject({stem:questions[0]?questions[0].stem:''}),date:Date.now(),count:questions.length,firstQ:(questions[0]?questions[0].stem:'').slice(0,80)};
@@ -1260,8 +1399,11 @@ const SmartParser={
     await DB.put('papers',pid+'_qs',withMeta);
     if(sb&&Auth.user)pushPapers();
     Store.questions=await allQuestionsFlat();
+    fillSources();
+    LibFilter.paper=pid;
     closeSheet('import-sheet');
     goTab('library');
+    return pid;
   }
 };
 
@@ -1334,6 +1476,7 @@ const Parser={
     if(userSubject)questions.forEach(q=>{q._userSubject=userSubject;q.paperId=pid;});
     questions.forEach(q=>{q.stem=q.stem.replace(/\*{1,2}([^*]+)\*{1,2}/g,'$1');q.answer=(q.answer||'').replace(/\*{1,2}/g,'');q.explanation=(q.explanation||'').replace(/\*{1,2}([^*]+)\*{1,2}/g,'$1');});
     Store.questions=await allQuestionsFlat();
+    fillSources();
     closeSheet('import-sheet');
     goTab('library');
     toast(questions.length+' 题已入库');
@@ -1372,36 +1515,74 @@ const QuickAdd={
     const letters=(answer.match(/[A-E]/g)||[]);
     const kpRaw=typeof o.category==='string'?o.category:(Array.isArray(o.knowledgePoints)?o.knowledgePoints.join('，'):'');
     const kps=kpRaw?String(kpRaw).split(/[,;，；、\n]/).map(s=>s.trim()).filter(s=>s):[];
-    const subject=o.subject||kps[0]||'实验安全';
+    const wantSubject=o.subject||kps[0]||'实验安全';
+    /* 试卷归属：o.paperId 指定现有试卷；'new' + paperName 新建一张；缺省进「手动添加」 */
+    let pid=o.paperId||'p-manual';
+    let p=Store.papers.find(x=>x.id===pid);
+    if(pid==='new'){
+      pid='p'+Date.now();
+      p={id:pid,name:(o.paperName||'').trim()||'未命名试卷',subject:wantSubject,date:Date.now(),count:0,firstQ:stem.slice(0,80)};
+      Store.papers.push(p);await DB.put('papers',p.id,p);
+    }else if(!p){
+      if(pid==='p-manual'){p={id:'p-manual',name:'手动添加',subject:wantSubject,date:Date.now(),count:0,firstQ:stem.slice(0,80)};Store.papers.push(p);await DB.put('papers',p.id,p);}
+      else{pid='p-manual';p=Store.papers.find(x=>x.id==='p-manual');
+        if(!p){p={id:'p-manual',name:'手动添加',subject:wantSubject,date:Date.now(),count:0,firstQ:stem.slice(0,80)};Store.papers.push(p);await DB.put('papers',p.id,p);}}
+    }
+    const subject=p.subject||wantSubject;
     const q={id:'q'+Date.now(),number:'手动'+String(Date.now()).slice(-5),stem,options,answer,
       explanation:String(o.explanation||'').trim(),
       knowledgePoints:kps.length?kps:[subject],
       type:options.length===0?'short_answer':(letters.length>1?'multiple_choice':'single_choice'),
-      _answerLetters:letters,_userSubject:subject,paperId:'p-manual',category:kps[0]||subject,subject};
-    let p=Store.papers.find(x=>x.id==='p-manual');
-    if(!p){p={id:'p-manual',name:'手动添加',subject:subject,date:Date.now(),count:0,firstQ:stem.slice(0,80)};Store.papers.push(p);await DB.put('papers',p.id,p);}
-    const qs=(await DB.get('papers','p-manual_qs'))||[];
-    qs.push(q);await DB.put('papers','p-manual_qs',qs);
+      _answerLetters:letters,_userSubject:subject,paperId:pid,category:kps[0]||subject,subject};
+    const qs=(await DB.get('papers',pid+'_qs'))||[];
+    qs.push(q);await DB.put('papers',pid+'_qs',qs);
     p.count=qs.length;await DB.put('papers',p.id,p);
     if(sb&&Auth.user)pushPapers();
     Store.questions=await allQuestionsFlat();
+    fillSources();
     refreshCurrentView();
     return q;
+  },
+  fillPaperSelect(){
+    const sel=document.getElementById('qa-paper');if(!sel)return;
+    const cur=sel.value;
+    let html='<option value="p-manual">手动添加</option>';
+    for(const p of paperList()){
+      if(p.id==='p-manual')continue;
+      html+=`<option value="${esc(p.id)}">《${esc(p.name)}》 · ${esc(p.subject||'')} · ${p.count||0} 题</option>`;
+    }
+    html+='<option value="new">＋ 新建试卷…</option>';
+    sel.innerHTML=html;
+    if([...sel.options].some(o=>o.value===cur))sel.value=cur;else sel.value='p-manual';
+    this.syncPaperForm();
+  },
+  syncPaperForm(){
+    const sel=document.getElementById('qa-paper');if(!sel)return;
+    const row=document.getElementById('qa-paper-name-row');
+    if(row)row.hidden=sel.value!=='new';
+    if(sel.value&&sel.value!=='new'){
+      const p=paperById(sel.value);
+      const sub=document.getElementById('qa-subject');
+      if(p&&p.subject&&sub)sub.value=p.subject;
+    }
   },
   async submit(){
     const stem=(document.getElementById('qa-stem').value||'').trim();
     if(!stem){toast('请先写题干');return;}
     const opt=(k)=>(document.getElementById('qa-opt-'+k).value||'').trim();
     const options=['A','B','C','D'].map(k=>({key:k,text:opt(k)})).filter(o=>o.text);
+    const paperSel=document.getElementById('qa-paper');
+    const paperId=paperSel?paperSel.value:'p-manual';
     const q=await this.add({
       stem,options,
       answer:(document.getElementById('qa-answer').value||'').trim(),
       explanation:(document.getElementById('qa-exp').value||'').trim(),
       category:(document.getElementById('qa-kp').value||'').trim(),
       subject:document.getElementById('qa-subject').value||'实验安全',
+      paperId,paperName:((document.getElementById('qa-paper-name')||{}).value||'').trim(),
     });
     if(!q)return;
-    ['qa-stem','qa-opt-A','qa-opt-B','qa-opt-C','qa-opt-D','qa-answer','qa-exp','qa-kp'].forEach(id=>{document.getElementById(id).value='';});
+    ['qa-stem','qa-opt-A','qa-opt-B','qa-opt-C','qa-opt-D','qa-answer','qa-exp','qa-kp','qa-paper-name'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     closeSheet('quickadd-sheet');
     goTab('library');
     toast('已添加 1 题');
@@ -1419,6 +1600,8 @@ const Quiz={
     if(this.source==='safety')list=SafetySeed.questions();
     else if(this.source==='wrongbook')list=[...Store.wrongBook];
     else if(this.source==='current')list=[...Store.questions];
+    else if((this.source||'').startsWith('paper:'))list=await questionsOfPaper(this.source.slice(6));
+    else if((this.source||'').startsWith('subject:'))list=await questionsOfSubject(this.source.slice(8));
     else list=await this.allQuestions();
     list=sortQuestions(list);
     if(this.category!=='all')list=list.filter(q=>catOf(q)===this.category);
@@ -1428,6 +1611,7 @@ const Quiz={
     this.queue=list.map(q=>({q,inst:++this._inst}));
     this.sessionTotal=this.queue.length;
     this.fillCategories();
+    fillSources();
   },
   fillCategories(){
     const sel=document.getElementById('quiz-category');if(!sel)return;
@@ -1891,32 +2075,78 @@ async function renderToday(){
 async function updateTodayBits(){try{await renderToday();}catch(e){}}
 
 /* ================= 题库 ================= */
-let LibFilter={q:'',cat:'all',kp:null};
-function renderLibrary(){
+let LibFilter={q:'',cat:'all',kp:null,subject:'all',paper:null};
+/* ================= 题库（v4：按试卷分组 + 按学科筛选；搜题/分类时显示扁平列表） ================= */
+function qRowHtml(q,paper){
+  const lv=Progress.mastery(q.id);
+  const wbIds=new Set(Store.wrongBook.map(w=>w.id));
+  const p=paper||paperById(q.paperId);
+  return `<button class="q-row" data-id="${q.id}">
+      <span class="q-dot lv${lv}"></span>
+      <span class="q-body">
+        <span class="q-num">第${esc(q.number||'')}题 · ${tn(q.type)} · ${esc(catOf(q))}${p?' · 《'+esc(p.name)+'》':''} · ${esc(subjectOf(q))}${wbIds.has(q.id)?' · 在错题本':''}</span>
+        <span class="q-stem">${esc((q.stem||'').replace(/\n/g,' ').slice(0,80))}${(q.stem||'').length>80?'…':''}</span>
+        <span class="q-next">下次复习：${Progress.nextLabel(q.id)}</span>
+      </span>
+    </button>`;
+}
+async function renderLibrary(){
   const all=Store.questions||[];
+  /* 学科 chips：从试卷与题目去重 */
+  const subs=subjectList();
+  const subCount={};
+  for(const q of all){const s=subjectOf(q);subCount[s]=(subCount[s]||0)+1;}
+  document.getElementById('lib-subject-chips').innerHTML='<button class="chip'+(LibFilter.subject==='all'?' on':'')+'" data-subject="all">全部学科</button>'+subs.map(s=>`<button class="chip${LibFilter.subject===s?' on':''}" data-subject="${esc(s)}">${esc(s)}（${subCount[s]||0}）</button>`).join('');
   const cats=[...new Set(all.map(q=>catOf(q)))].sort();
   document.getElementById('lib-chips').innerHTML='<button class="chip'+(LibFilter.cat==='all'?' on':'')+'" data-cat="all">全部</button>'+cats.map(c=>`<button class="chip${LibFilter.cat===c?' on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
   const af=document.getElementById('lib-active-filter');
   af.innerHTML=LibFilter.kp?`<button class="chip on" id="lib-kp-clear">知识点「${esc(LibFilter.kp)}」 ✕</button>`:'';
   const clear=document.getElementById('lib-kp-clear');
   if(clear)clear.onclick=()=>{LibFilter.kp=null;renderLibrary();};
+  /* 搜题/分类模式：扁平列表；否则按试卷分组 */
+  const searchMode=!!LibFilter.q||LibFilter.cat!=='all'||!!LibFilter.kp;
   let list=all;
+  if(LibFilter.subject!=='all')list=list.filter(q=>subjectOf(q)===LibFilter.subject);
   if(LibFilter.kp)list=list.filter(q=>(q.knowledgePoints||[]).indexOf(LibFilter.kp)>=0);
   if(LibFilter.cat!=='all')list=list.filter(q=>catOf(q)===LibFilter.cat);
   if(LibFilter.q){const s=LibFilter.q.toLowerCase();list=list.filter(x=>((x.stem||'')+' '+(x.knowledgePoints||[]).join(' ')+' '+(x.category||'')+' '+(x.subject||'')+' '+(x.explanation||'')).toLowerCase().includes(s));}
-  document.getElementById('lib-count').innerHTML='共 <b>'+list.length+'</b> 题'+(LibFilter.q?'（搜索“'+esc(LibFilter.q)+'”）':'');
-  const wbIds=new Set(Store.wrongBook.map(w=>w.id));
-  document.getElementById('lib-list').innerHTML=list.length?list.map(q=>{
-    const lv=Progress.mastery(q.id);
-    return `<button class="q-row" data-id="${q.id}">
-      <span class="q-dot lv${lv}"></span>
-      <span class="q-body">
-        <span class="q-num">第${esc(q.number||'')}题 · ${tn(q.type)} · ${esc(catOf(q))}${wbIds.has(q.id)?' · 在错题本':''}</span>
-        <span class="q-stem">${esc((q.stem||'').replace(/\n/g,' ').slice(0,80))}${(q.stem||'').length>80?'…':''}</span>
-        <span class="q-next">下次复习：${Progress.nextLabel(q.id)}</span>
-      </span>
-    </button>`;
-  }).join(''):'<div class="empty">没有符合条件的题目。</div>';
+  const papersEl=document.getElementById('lib-papers');
+  const listEl=document.getElementById('lib-list');
+  if(searchMode){
+    papersEl.innerHTML='';
+    document.getElementById('lib-count').innerHTML='共 <b>'+list.length+'</b> 题'+(LibFilter.q?'（搜索“'+esc(LibFilter.q)+'”）':'');
+    listEl.innerHTML=list.length?list.map(q=>qRowHtml(q)).join(''):'<div class="empty">没有符合条件的题目。</div>';
+    return;
+  }
+  /* 试卷模式 */
+  let papers=paperList();
+  if(LibFilter.subject!=='all')papers=papers.filter(p=>p.subject===LibFilter.subject);
+  if(LibFilter.paper&&!papers.some(p=>p.id===LibFilter.paper))LibFilter.paper=null;
+  const totalQ=papers.reduce((a,p)=>a+(p.count||0),0);
+  document.getElementById('lib-count').innerHTML='共 <b>'+papers.length+'</b> 张试卷 · <b>'+totalQ+'</b> 题';
+  listEl.innerHTML='';
+  papersEl.innerHTML=papers.length?papers.map(p=>{
+    const open=LibFilter.paper===p.id;
+    const d=p.date?new Date(p.date).toLocaleDateString('zh-CN'):'';
+    return `<div class="paper-card" data-pid="${esc(p.id)}">
+      <button class="paper-head" data-paper-toggle="${esc(p.id)}">
+        <span class="paper-chev">${open?'▾':'▸'}</span>
+        <span class="paper-name">《${esc(p.name)}》</span>
+        <span class="paper-meta" style="display:block">${esc(p.subject||'')} · ${p.count||0} 题${d?' · '+d:''}</span>
+        ${p.firstQ?`<span class="paper-first">首题：${esc(p.firstQ)}</span>`:''}
+      </button>
+      <div class="paper-qs"${open?'':' hidden'}>${open?'<div class="muted">加载中…</div>':''}</div>
+      <div class="paper-actions"><button class="btn small primary" data-paper-quiz="${esc(p.id)}">刷这套</button></div>
+    </div>`;
+  }).join(''):'<div class="empty">还没有试卷，先导入一份吧。</div>';
+  if(LibFilter.paper){
+    const p=paperById(LibFilter.paper);
+    const box=papersEl.querySelector('.paper-card[data-pid="'+LibFilter.paper+'"] .paper-qs');
+    if(p&&box){
+      const qs=await questionsOfPaper(p.id);
+      box.innerHTML=qs.length?qs.map(q=>qRowHtml(q,p)).join(''):'<div class="empty">这张试卷还没有题目。</div>';
+    }
+  }
 }
 
 /* ================= 错题 ================= */
@@ -1958,12 +2188,26 @@ async function startDueReview(){
 }
 
 /* ================= sheets ================= */
+/* ================= 刷题题源（v4：按试卷 / 按学科；与题库共用同一套试卷数据） ================= */
+function fillSources(){
+  const sel=document.getElementById('quiz-source');if(!sel)return;
+  const cur=Quiz.source;
+  const papers=paperList();
+  let html='<option value="safety">仅安全题</option><option value="all">全部题目</option><option value="wrongbook">错题本</option><option value="current">当前题库</option>';
+  if(papers.length)html+='<optgroup label="按试卷">'+papers.map(p=>`<option value="paper:${esc(p.id)}">《${esc(p.name)}》 · ${p.count||0} 题</option>`).join('')+'</optgroup>';
+  const subs=subjectList();
+  if(subs.length)html+='<optgroup label="按学科">'+subs.map(s=>`<option value="subject:${esc(s)}">${esc(s)}</option>`).join('')+'</optgroup>';
+  sel.innerHTML=html;
+  if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+  else{sel.value='safety';Quiz.source='safety';}
+}
 function openSheet(id){
   const s=document.getElementById(id);if(!s)return;
   s.classList.add('open');
   const b=document.getElementById(id.replace('-sheet','-backdrop'));
   if(b)b.classList.add('open');
   if(id==='me-sheet')renderMe();
+  if(id==='quickadd-sheet')QuickAdd.fillPaperSelect();
 }
 function closeSheet(id){
   const s=document.getElementById(id);if(s)s.classList.remove('open');
@@ -2044,7 +2288,13 @@ async function openQSheet(id){
     if(q.paperId===SAFETY_PAPER_ID){toast('内置安全题不能删除');return;}
     if(!confirm('删除这道题？'))return;
     const pid=q.paperId;
-    if(pid){const qs=(await DB.get('papers',pid+'_qs'))||[];await DB.put('papers',pid+'_qs',qs.filter(x=>x.id!==id));}
+    if(pid){
+      const qs=(await DB.get('papers',pid+'_qs'))||[];
+      const nq=qs.filter(x=>x.id!==id);
+      await DB.put('papers',pid+'_qs',nq);
+      const p=Store.papers.find(x=>x.id===pid);
+      if(p){p.count=nq.length;await DB.put('papers',p.id,p);}
+    }
     Store.questions=(Store.questions||[]).filter(x=>x.id!==id);
     await Store.removeFromWB(id);
     closeSheet('q-sheet');refreshCurrentView();toast('已删除');
@@ -2101,6 +2351,15 @@ function wire(){
   document.getElementById('quiz-reset-safety').addEventListener('click',()=>SafetySeed.reset());
   document.getElementById('search-input').addEventListener('input',e=>{LibFilter.q=e.target.value.trim();renderLibrary();});
   document.getElementById('lib-chips').addEventListener('click',e=>{const c=e.target.closest('[data-cat]');if(!c)return;LibFilter.cat=c.dataset.cat;renderLibrary();});
+  document.getElementById('lib-subject-chips').addEventListener('click',e=>{const c=e.target.closest('[data-subject]');if(!c)return;LibFilter.subject=c.dataset.subject;LibFilter.paper=null;renderLibrary();});
+  document.getElementById('lib-papers').addEventListener('click',async e=>{
+    const qb=e.target.closest('[data-paper-quiz]');
+    if(qb){Quiz.start({source:'paper:'+qb.dataset.paperQuiz,mode:'seq'});return;}
+    const tg=e.target.closest('[data-paper-toggle]');
+    if(tg){const pid=tg.dataset.paperToggle;LibFilter.paper=LibFilter.paper===pid?null:pid;renderLibrary();return;}
+    const r=e.target.closest('[data-id]');
+    if(r)openQSheet(r.dataset.id);
+  });
   document.getElementById('lib-list').addEventListener('click',e=>{const r=e.target.closest('[data-id]');if(r)openQSheet(r.dataset.id);});
   document.getElementById('lib-import').addEventListener('click',()=>openSheet('import-sheet'));
   document.getElementById('lib-add').addEventListener('click',()=>openSheet('quickadd-sheet'));
@@ -2148,11 +2407,17 @@ function wire(){
   document.getElementById('exam-start-btn').addEventListener('click',()=>Exam.start());
   document.getElementById('exam-back').addEventListener('click',()=>goTab('today'));
   document.getElementById('import-run').addEventListener('click',()=>SmartParser.parseSmart());
+  document.getElementById('import-result').addEventListener('click',async e=>{
+    const b=e.target.closest('[data-act]');if(!b)return;
+    if(b.dataset.act==='confirm-import')await SmartParser.confirmImport();
+    else if(b.dataset.act==='cancel-import'){SmartParser._pending=null;document.getElementById('import-result').textContent='已取消，未入库。';}
+  });
   document.getElementById('import-file-btn').addEventListener('click',()=>document.getElementById('import-file').click());
   document.getElementById('import-file').addEventListener('change',e=>SmartParser.loadFile(e.target));
   document.getElementById('copy-prompt-btn').addEventListener('click',copyPrompt);
   document.getElementById('legacy-run').addEventListener('click',()=>Parser.parse());
   document.getElementById('qa-submit').addEventListener('click',()=>QuickAdd.submit());
+  document.getElementById('qa-paper').addEventListener('change',()=>QuickAdd.syncPaperForm());
   document.getElementById('backup-export').addEventListener('click',()=>Store.exportData());
   document.getElementById('backup-import').addEventListener('click',()=>document.getElementById('backup-file').click());
   document.getElementById('backup-file').addEventListener('change',async e=>{
@@ -2175,7 +2440,7 @@ function wire(){
 }
 
 /* ================= 启动：先渲染，后在后台做数据与登录 ================= */
-window.__danke={version:'3',Store,Progress,Quiz,Exam,SafetySeed,DB,Auth,QuickAdd,SmartParser,goTab};
+window.__danke={version:'4',Store,Progress,Quiz,Exam,SafetySeed,DB,Auth,QuickAdd,SmartParser,goTab};
 (async()=>{
   Settings.load();
   wire();
@@ -2187,6 +2452,7 @@ window.__danke={version:'3',Store,Progress,Quiz,Exam,SafetySeed,DB,Auth,QuickAdd
   try{await Store.load();}catch(e){console.error('store load failed',e);}
   try{await Progress.load();}catch(e){}
   try{Store.questions=await allQuestionsFlat();}catch(e){Store.questions=SafetySeed.questions();}
+  fillSources();
   renderToday();renderLibrary();renderWrongBook();updateSyncUI();movePill('today');
   setTimeout(()=>movePill(Store.currentPage||'today'),400);
   Auth.init().catch(()=>{});
