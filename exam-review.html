@@ -1385,6 +1385,7 @@ const QuickAdd={
     p.count=qs.length;await DB.put('papers',p.id,p);
     if(sb&&Auth.user)pushPapers();
     Store.questions=await allQuestionsFlat();
+    refreshCurrentView();
     return q;
   },
   async submit(){
@@ -1411,7 +1412,7 @@ const QuickAdd={
 const Quiz={
   pool:[],queue:[],idx:0,mode:'seq',source:'safety',category:'all',
   correct:0,wrong:0,answered:{},selected:new Set(),_inst:0,
-  sessionCorrect:{},_requeued:new Set(),customLabel:'',startedAt:0,done:false,_built:false,
+  sessionCorrect:{},_requeued:new Set(),customLabel:'',startedAt:0,done:false,_built:false,sessionTotal:0,
   async allQuestions(){return allQuestionsFlat();},
   async buildPool(){
     let list=[];
@@ -1425,6 +1426,7 @@ const Quiz={
     this.pool=list;this.idx=0;this.answered={};this.correct=0;this.wrong=0;this.selected=new Set();
     this.sessionCorrect={};this._requeued=new Set();this.done=false;
     this.queue=list.map(q=>({q,inst:++this._inst}));
+    this.sessionTotal=this.queue.length;
     this.fillCategories();
   },
   fillCategories(){
@@ -1446,6 +1448,7 @@ const Quiz={
     if(opts.count!=null&&opts.count!=='all')list=list.slice(0,parseInt(opts.count,10)||list.length);
     if(opts.startId){const i=list.findIndex(q=>q.id===opts.startId);if(i>0)list=list.slice(i).concat(list.slice(0,i));}
     this.queue=list.map(q=>({q,inst:++this._inst}));
+    this.sessionTotal=this.queue.length;
     this.idx=0;this.correct=0;this.wrong=0;this.answered={};this.selected=new Set();
     this.sessionCorrect={};this._requeued=new Set();this.done=false;this.customLabel='';
     this.startedAt=Date.now();
@@ -1456,6 +1459,7 @@ const Quiz={
   setCustomPool(list,label){
     Exam.active=false;
     this.pool=(list||[]).slice();this.queue=this.pool.map(q=>({q,inst:++this._inst}));
+    this.sessionTotal=this.queue.length;
     this.idx=0;this.answered={};this.correct=0;this.wrong=0;
     this.selected=new Set();this.sessionCorrect={};this._requeued=new Set();this.done=false;
     this.customLabel=label||'';this.startedAt=Date.now();
@@ -1483,6 +1487,7 @@ const Quiz={
     if(!list.length){toast('上次的题目找不到了');return;}
     Exam.active=false;
     this.pool=list.slice();this.queue=list.map(q=>({q,inst:++this._inst}));
+    this.sessionTotal=this.queue.length;
     this.idx=Math.min(snap.idx||0,this.queue.length-1);
     this.correct=snap.correct||0;this.wrong=snap.wrong||0;
     this.answered={};this.selected=new Set();this.sessionCorrect={};this._requeued=new Set();this.done=false;
@@ -1496,7 +1501,7 @@ const Quiz={
     if(Exam.active)return;
     if(!this.queue.length&&!this._built){this._built=true;await this.buildPool();this.render();return;}
     const card=document.getElementById('quiz-card'),fb=document.getElementById('quiz-feedback');
-    const total=this.queue.length;
+    const total=this.sessionTotal||this.queue.length; /* 分母固定为开局题数；judge() 的重排只加队尾，不改分母 */
     const done=this.correct+this.wrong;
     document.getElementById('quiz-bar').style.width=total?Math.round((this.idx/total)*100)+'%':'0%';
     document.getElementById('quiz-progress-text').innerHTML=total?('第 <b>'+(this.idx+1)+'</b> / 共 <b>'+total+'</b> 题'):'第 0 / 共 0 题';
